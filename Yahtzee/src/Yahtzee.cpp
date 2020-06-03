@@ -7,7 +7,12 @@
 //============================================================================
 
 #include <iostream>
-#include <bitset>
+#include <bitset> // print out bits
+#include <algorithm> // sort
+#include <cstdlib> // rand
+#include <ctime> // time() used to seed RNG
+#include <string>
+//#include <bits/stdc++.h>
 #include "Yahtzee.h"
 
 // Begins a game from specified state
@@ -18,10 +23,13 @@ Yahtzee::Yahtzee(state * start_state) {
 	// print state in bits to diagnose any errors
 	std::bitset<64> b(curr_state_id);
 	std::cout << "Current State ID = " << b << std::endl;
+	srand(time(0)); // Set seed for RNG
 }
 
 // Begins a game from the beginning. Do not jump to specific state.
-Yahtzee::Yahtzee() : up_total(0), curr_state_id(1 << 16), st(nullptr) {}
+Yahtzee::Yahtzee() : up_total(0), curr_state_id(1 << 16), st(nullptr) {
+	srand(time(0)); // Set seed for RNG
+}
 
 Yahtzee::~Yahtzee() {
 	//delete s; // Is this even necessary?
@@ -61,9 +69,62 @@ long Yahtzee::getStateId() {
 	return curr_state_id;
 }
 
+void Yahtzee::roll(int num_to_roll) {
+	if(num_to_roll > 5 || num_to_roll < 1) {
+		std::cout << "You cannot roll this many dice! (" << num_to_roll << ")\n";
+		return;
+	}
+	for(int i = 0; i < num_to_roll; i++)
+		st->dice.at(i) = (rand() % 6) + 1; // Generate number between 1 and 6
+	std::sort(st->dice.begin(), st->dice.end());
+
+	// For testing purposes
+	for(int i = 0; i < num_to_roll; i++)
+		std::cout << "Dice " << i << " = " << st->dice[i] << "; ";
+	std::cout << std::endl;
+	return;
+}
+
+
+int Yahtzee::selectDice(std::string input) {
+	if(input.size() == 0) {
+		std::cout << "Please input which dice to keep\n";
+		return -1;
+	}
+	int num_kept = 0;
+	// First, put all dice intended to keep into sorted vector of 1-4 values
+	std::vector<char> dice_to_keep;
+	for(unsigned int i = 0; i < input.size(); i++)
+		dice_to_keep.push_back(input[i]);
+	// Sort in ascending order so the last dices' values are not accidentally eliminated
+	// See comment later in this function
+	std::sort(dice_to_keep.begin(), dice_to_keep.end(), std::greater<char>());
+
+	// Next, check for invalid inputs (characters other than numbers 1-5 or duplicated characters)
+	if(dice_to_keep[0] < '1' || dice_to_keep[dice_to_keep.size() - 1] > '5') {
+		std::cout << "Invalid input. Please only enter characters between 1 and 5.\n";
+		return -1;
+	}
+	for(unsigned int i = 0; i < dice_to_keep.size(); i++) {
+		if(i > 0 && dice_to_keep[i] == dice_to_keep[i-1]) {
+			std::cout << "Invalid input. Please do not duplicate values. Was this in error? Try again.\n";
+			return -1;
+		}
+	}
+
+	// Finally, if input is valid then save the kept dice at the back of the dice list
+	// Kept dice are saved at the back so the roll function does not overwrite them.
+	for(unsigned int i = 0; i < dice_to_keep.size(); i++) {
+		// curr - 49 will yield a number 1-5
+		st->dice[5-num_kept] = st->dice[dice_to_keep[i] - 49]; // 49 is ascii value '1'
+		num_kept++;
+	}
+	return num_kept;
+}
+
 int main() {
 	//std::cout << "Welcome to the yahtzee program!" << std::endl; // prints Hello World!!!
-	std::vector<char> d(5, 1);
+	std::vector<int> d(5, 1);
 	state * test = new state;
 	test->sc_status = 2; // Only taken yahtzee
 	test->roll_num = 4; // Entering first roll of second turn
@@ -72,6 +133,8 @@ int main() {
 	test->y_bonus = 1; // Yahtzee bonus is available
 
 	Yahtzee y(test);
+	for(int i = 0; i < 10; i++)
+		y.roll(5);
 	delete test;
 	return 0;
 }

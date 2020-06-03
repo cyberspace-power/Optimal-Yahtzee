@@ -11,13 +11,14 @@
 
 #include <vector>
 #include <iostream>
+#include <string>
 
 typedef struct state {
 	unsigned int up_bonus;
 	bool y_bonus;
 	unsigned short sc_status; //scorecard status --> what sections remain
 	char roll_num;
-	std::vector<char> dice;
+	std::vector<int> dice;
 } state;
 
 class Yahtzee {
@@ -29,7 +30,8 @@ class Yahtzee {
 	void setStateId(state * s);
 	char getDiceStateId(state * s);
 	char setUpperBonusStateId();
-	void roll();
+	void roll(int num_to_roll);
+	int selectDice(std::string input);
 	void takeSection();
 
   private:
