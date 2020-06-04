@@ -12,6 +12,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 typedef struct state {
 	unsigned int up_bonus;
@@ -39,6 +40,8 @@ class Yahtzee {
 	long curr_state_id;
 	state * st;
 	int score;
+	std::unordered_map<int, int> dice_state_map;
+
 };
 
 

@@ -12,6 +12,7 @@
 #include <cstdlib> // rand
 #include <ctime> // time() used to seed RNG
 #include <string>
+#include <unordered_map>
 //#include <bits/stdc++.h>
 #include "Yahtzee.h"
 
@@ -19,7 +20,7 @@
 Yahtzee::Yahtzee(state * start_state) {
 	score = 0;
 	st = start_state;
-	curr_state_id = !st ? (0x1 << 16) : 0; //Start state of new game
+	curr_state_id = !st ? (0x1 << 28) : 0; //Start state of new game
 	setStateId(st);
 	// print state in bits to diagnose any errors
 	std::bitset<34> b(curr_state_id);
@@ -30,12 +31,24 @@ Yahtzee::Yahtzee(state * start_state) {
 }
 
 // Begins a game from the beginning. Do not jump to specific state.
-Yahtzee::Yahtzee() : up_total(0), curr_state_id(1 << 16), st(nullptr), score(0) {
+Yahtzee::Yahtzee() {
+	up_total = 0;
+	score = 0;
+	curr_state_id = 1 << 28;
+
+	st = new state;
+	std::vector<int> d(5,1);
+	st->dice = d;
+	st->roll_num = 1;
+	st->sc_status = 0;
+	st->up_bonus = 0;
+	st->y_bonus = 0;
+
 	srand(time(0)); // Set seed for RNG
 }
 
 Yahtzee::~Yahtzee() {
-	delete st; // Is this even necessary?
+	delete st;
 }
 
 /*
@@ -59,6 +72,34 @@ void Yahtzee::setStateId(state * s) {
  * Return possible results of 0-252 as an unsigned char (8 bits).
  */
 unsigned char Yahtzee::getDiceStateId(state * s) {
+	// First put dice number and frequencies into arrays:
+	int dice_faces[5] = {0,0,0,0,0};
+	int frequencies[5] = {0,0,0,0,0};
+	std::vector<int> dice_copy = s->dice; // Create copy of dice because dice must be sorted
+	std::sort(dice_copy.begin(), dice_copy.end());
+	int numbers = -1;
+	for(int i = 0; i < 5; i++) {
+		if(i > 0 && dice_copy[i] == dice_copy[i-1]) {
+			frequencies[numbers]++;
+		}
+		else {
+			numbers++;
+			dice_faces[numbers] = dice_copy[i];
+			frequencies[numbers]++;
+		}
+	}
+	// For testing purposes
+	for(int i = 0; i < 5; i++)
+		std::cout << dice_faces[i] << ": " << frequencies[i] << std::endl;
+	// Since no number in either array will be greater than 6, the max of 10
+	// numbers will all fit in 3 bits. 3*10 = 30 bits < 32 bit integer.
+	int key = 0;
+	for(int i = 0; i < 5; i++)
+		key |= (dice_faces[i] << ((i*6) + 3)) | (frequencies[i] << (i*6));
+	// For testing purposes
+	std::bitset<30> bit(key);
+	std::cout << "Key = " << key << std::endl;
+	std::cout << "Key(binary) = " << bit << std::endl;
 	return 254;
 }
 
@@ -93,6 +134,7 @@ void Yahtzee::roll(std::string& kept_dice) {
 			std::cout << st->dice[i] << "*, ";
 	}
 	std::cout << std::endl;
+	getDiceStateId(st);
 	return;
 }
 
@@ -150,7 +192,7 @@ int main() {
 	test->y_bonus = 1; // Yahtzee bonus is available
 
 	Yahtzee y(test);
-	/*std::string temp;
+	std::string temp;
 	for(int i = 0; i < 10; i++) {
 		y.roll(temp);
 		int selected_dice = -1;
@@ -159,8 +201,7 @@ int main() {
 			std::getline(std::cin, temp);
 			selected_dice = y.selectDice(temp);
 		}
-
-	}*/
-	delete test;
+	}
+	//delete test;
 	return 0;
 }
