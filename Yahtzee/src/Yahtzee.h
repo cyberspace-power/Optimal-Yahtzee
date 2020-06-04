@@ -28,16 +28,17 @@ class Yahtzee {
 	~Yahtzee();
 	long getStateId();
 	void setStateId(state * s);
-	char getDiceStateId(state * s);
+	unsigned char getDiceStateId(state * s);
 	char setUpperBonusStateId();
-	void roll(int num_to_roll);
-	int selectDice(std::string input);
+	void roll(std::string& kept_dice);
+	int selectDice(std::string& input);
 	void takeSection();
 
   private:
 	int up_total;
 	long curr_state_id;
 	state * st;
+	int score;
 };
 
 
