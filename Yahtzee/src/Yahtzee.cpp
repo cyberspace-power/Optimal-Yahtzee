@@ -13,13 +13,20 @@
 #include <ctime> // time() used to seed RNG
 #include <string>
 #include <unordered_map>
-//#include <bits/stdc++.h>
 #include "Yahtzee.h"
 
 // Begins a game from specified state
 Yahtzee::Yahtzee(state * start_state) {
+	empty_constructor = false; // Tells destructor to not delete state ptr
 	score = 0;
 	st = start_state;
+
+	// There will be 252 dice states (including null roll). Set map to
+	// be ready for 252 entries. Reduces rehashing that can slow speed
+	dice_state_map.reserve(252);
+	int curr_combo[10];
+	int combo_count = 1;
+	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	curr_state_id = !st ? (0x1 << 28) : 0; //Start state of new game
 	setStateId(st);
 	// print state in bits to diagnose any errors
@@ -32,10 +39,18 @@ Yahtzee::Yahtzee(state * start_state) {
 
 // Begins a game from the beginning. Do not jump to specific state.
 Yahtzee::Yahtzee() {
+	empty_constructor = true; // Tells destructor to delete state ptr
 	up_total = 0;
 	score = 0;
-	curr_state_id = 1 << 28;
 
+	// There will be 252 dice states (including null roll). Set map to
+	// be ready for 252 entries. Reduces rehashing that can slow speed
+	dice_state_map.reserve(252);
+	int curr_combo[10];
+	int combo_count = 0;
+	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
+	std::cout << "Dice state map size = " << dice_state_map.size() << "\n";
+	curr_state_id = 1 << 28; // Initial state at beginning of new game
 	st = new state;
 	std::vector<int> d(5,1);
 	st->dice = d;
@@ -43,12 +58,49 @@ Yahtzee::Yahtzee() {
 	st->sc_status = 0;
 	st->up_bonus = 0;
 	st->y_bonus = 0;
-
 	srand(time(0)); // Set seed for RNG
 }
 
 Yahtzee::~Yahtzee() {
-	delete st;
+	if(empty_constructor)
+		delete st;
+}
+
+/*
+ * Purpose: Set the dice state map to allow for constant time lookups
+ *    The unordered_map from STL is used to track this mapping
+ * Style: Recursive function that iterates through all possible
+ *    dice combinations and maps them to the number of mapped combos
+ *    to that point (i.e. A number between 1-252)
+ */
+void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
+	for(int i = min; i <= 6; i++) {
+		curr_combo[curr_index] = i;
+		for(int j = freq_left; j > 0; j--) {
+			curr_combo[curr_index + 1] = j;
+			if(j == freq_left) { // No more dice can be added to combo. Map it!
+				if(dice_state_map.find(getDiceKey(curr_combo)) != dice_state_map.end())
+					std::cout << "Error -- Element already exists\n";
+				dice_state_map[getDiceKey(curr_combo)] = combo_count;
+
+				// Print for testing purposes
+				std::cout << combo_count << std::endl;
+				for(int i = 0; i <= curr_index; i += 2) {
+					std::cout << curr_combo[i] << ": " << curr_combo[i+1] << std::endl;
+				}
+
+				combo_count++;
+			}
+			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
+				break;
+			else // recurse to next highest number and place in combo array
+				setDiceMap(freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
+		}
+	}
+	// About to return to previous recursion. Reset array values to 0
+	curr_combo[curr_index] = 0;
+	curr_combo[curr_index + 1] = 0;
+	return;
 }
 
 /*
@@ -67,39 +119,49 @@ void Yahtzee::setStateId(state * s) {
 }
 
 /*
+ * Helper function for getDiceStateId
+ * Simply calculates and returns key for the unordered mapping
+ */
+int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
+	// Since no number in either array will be greater than 6, the max of 10
+	// numbers will all fit in 3 bits. 3*10 = 30 bits < 32 bit integer.
+	int key = 0;
+	for(int i = 0; i < 5; i++)
+		key |= (dice_multisets[i*2] << ((i*6) + 3)) | (dice_multisets[i*2 + 1] << (i*6));
+	// For testing purposes
+	/*std::bitset<30> bit(key);
+	std::cout << "Key = " << key << std::endl;
+	std::cout << "Key(binary) = " << bit << std::endl;*/
+
+	return key;
+}
+
+/*
  * Organize dice state into multiset form such that it can be condensed
  * to 8 bits. Use hashmap or dict(?) lookup to quickly determine it's id.
  * Return possible results of 0-252 as an unsigned char (8 bits).
  */
 unsigned char Yahtzee::getDiceStateId(state * s) {
-	// First put dice number and frequencies into arrays:
-	int dice_faces[5] = {0,0,0,0,0};
-	int frequencies[5] = {0,0,0,0,0};
 	std::vector<int> dice_copy = s->dice; // Create copy of dice because dice must be sorted
 	std::sort(dice_copy.begin(), dice_copy.end());
+	// First put dice number and frequencies into arrays:
+	int dice_multisets[10] = {0,0,0,0,0,0,0,0,0,0};
 	int numbers = -1;
 	for(int i = 0; i < 5; i++) {
 		if(i > 0 && dice_copy[i] == dice_copy[i-1]) {
-			frequencies[numbers]++;
+			dice_multisets[numbers*2 + 1]++;
 		}
 		else {
 			numbers++;
-			dice_faces[numbers] = dice_copy[i];
-			frequencies[numbers]++;
+			dice_multisets[numbers*2] = dice_copy[i];
+			dice_multisets[numbers*2 + 1]++;
 		}
 	}
 	// For testing purposes
 	for(int i = 0; i < 5; i++)
-		std::cout << dice_faces[i] << ": " << frequencies[i] << std::endl;
-	// Since no number in either array will be greater than 6, the max of 10
-	// numbers will all fit in 3 bits. 3*10 = 30 bits < 32 bit integer.
-	int key = 0;
-	for(int i = 0; i < 5; i++)
-		key |= (dice_faces[i] << ((i*6) + 3)) | (frequencies[i] << (i*6));
-	// For testing purposes
-	std::bitset<30> bit(key);
-	std::cout << "Key = " << key << std::endl;
-	std::cout << "Key(binary) = " << bit << std::endl;
+		std::cout << dice_multisets[i*2] << ": " << dice_multisets[i*2 + 1] << std::endl;
+	/*int key = getDiceKey(dice_multisets);
+	//return dice_state_map.at(key);*/
 	return 254;
 }
 
@@ -192,7 +254,7 @@ int main() {
 	test->y_bonus = 1; // Yahtzee bonus is available
 
 	Yahtzee y(test);
-	std::string temp;
+	/*std::string temp;
 	for(int i = 0; i < 10; i++) {
 		y.roll(temp);
 		int selected_dice = -1;
@@ -201,7 +263,7 @@ int main() {
 			std::getline(std::cin, temp);
 			selected_dice = y.selectDice(temp);
 		}
-	}
-	//delete test;
+	}*/
+	delete test;
 	return 0;
 }
