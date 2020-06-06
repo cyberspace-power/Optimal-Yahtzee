@@ -31,24 +31,22 @@ typedef struct state2 {
 
 class Yahtzee {
   public:
-	Yahtzee(state * start_state);
+	Yahtzee(state start_state);
 	Yahtzee();
-	~Yahtzee();
 	void setDiceMap(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
 	long getStateId();
-	void setStateId(state * s);
+	void setStateId(state &s);
 	int getDiceKey(int (&dice_multisets)[10]); // Helper for getDiceStateId()
-	unsigned char getDiceStateId(state * s);
+	unsigned char getDiceStateId(state &s);
 	char setUpperBonusStateId();
 	void roll(std::string& kept_dice);
 	int selectDice(std::string& input);
 	void takeSection();
 
   private:
-	bool empty_constructor;
 	int up_total;
 	long curr_state_id;
-	state * st;
+	state st;
 	int score;
 	std::unordered_map<int, int> dice_state_map;
 

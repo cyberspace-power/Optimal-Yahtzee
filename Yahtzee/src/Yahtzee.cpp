@@ -16,8 +16,7 @@
 #include "Yahtzee.h"
 
 // Begins a game from specified state
-Yahtzee::Yahtzee(state * start_state) { // Copy here, by reference everywhere else
-	empty_constructor = false; // Tells destructor to not delete state ptr
+Yahtzee::Yahtzee(state start_state) {
 	score = 0;
 	st = start_state;
 
@@ -39,7 +38,6 @@ Yahtzee::Yahtzee(state * start_state) { // Copy here, by reference everywhere el
 
 // Begins a game from the beginning. Do not jump to specific state.
 Yahtzee::Yahtzee() {
-	empty_constructor = true; // Tells destructor to delete state ptr
 	up_total = 0;
 	score = 0;
 
@@ -51,19 +49,13 @@ Yahtzee::Yahtzee() {
 	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	std::cout << "Dice state map size = " << dice_state_map.size() << "\n";
 	curr_state_id = 1 << 28; // Initial state at beginning of new game
-	st = new state;
 	std::vector<int> d(5,1);
-	st->dice = d;
-	st->roll_num = 1;
-	st->sc_status = 0;
-	st->up_bonus = 0;
-	st->y_bonus = 0;
+	st.dice = d;
+	st.roll_num = 1;
+	st.sc_status = 0;
+	st.up_bonus = 0;
+	st.y_bonus = 0;
 	srand(time(0)); // Set seed for RNG
-}
-
-Yahtzee::~Yahtzee() {
-	if(empty_constructor)
-		delete st;
 }
 
 /*
@@ -111,10 +103,10 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
  * These states are strategically organized such that the probability calculations
  * later will be done close to the order of the states in a sorted state table
  */
-void Yahtzee::setStateId(state * s) {
-	curr_state_id = ((long)s->roll_num << 28) | ((long)s->sc_status << 15) | ((long)getDiceStateId(s) << 7) |
-			((long)s->up_bonus << 1) | ((long)s->y_bonus);
-	return; // Fix order: sc, upper bonus, y_bonus, roll, dice state
+void Yahtzee::setStateId(state &s) {
+	curr_state_id = ((long)s.sc_status << 21) | ((long)s.up_bonus << 15) | ((long)s.y_bonus << 14) |
+				((long)s.roll_num << 8) |  ((long)getDiceStateId(s));
+	return;
 }
 
 /*
@@ -140,11 +132,11 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
  * to 8 bits. Use hashmap or dict(?) lookup to quickly determine it's id.
  * Return possible results of 0-252 as an unsigned char (8 bits).
  */
-unsigned char Yahtzee::getDiceStateId(state * s) {
+unsigned char Yahtzee::getDiceStateId(state &s) {
 	if(s == nullptr) // When turn ends, takeSection passes in nullptr
 		return 0; // Dice state 0 represents beginning of new turn (no dice roll yet)
 	//Add null roll check
-	std::vector<int> dice_copy = s->dice; // Create copy of dice because dice must be sorted
+	std::vector<int> dice_copy = s.dice; // Create copy of dice because dice must be sorted
 	std::sort(dice_copy.begin(), dice_copy.end());
 	// First put dice number and frequencies into arrays:
 	int dice_multisets[10] = {0,0,0,0,0,0,0,0,0,0};
@@ -187,16 +179,16 @@ void Yahtzee::roll(std::string& kept_dice) {
 		is_roll[(int)kept_dice[i] - 49] = false; // convert char to int and subtract 49 for correct integer
 	for(int i = 0; i < 5; i++) {
 		if(is_roll[i])
-			st->dice.at(i) = (rand() % 6) + 1; // Generate number between 1 and 6
+			st.dice.at(i) = (rand() % 6) + 1; // Generate number between 1 and 6
 	}
 
 	// For testing purposes
 	std::cout << "Roll: ";
 	for(int i = 0; i < 5; i++) {
 		if(is_roll[i])
-			std::cout << st->dice[i] << ", ";
+			std::cout << st.dice[i] << ", ";
 		else
-			std::cout << st->dice[i] << "*, ";
+			std::cout << st.dice[i] << "*, ";
 	}
 	std::cout << std::endl;
 	getDiceStateId(st);
@@ -249,12 +241,12 @@ int Yahtzee::selectDice(std::string& input) {
 int main() {
 	//std::cout << "Welcome to the yahtzee program!" << std::endl; // prints Hello World!!!
 	std::vector<int> d(5, 1);
-	state * test = new state;
-	test->sc_status = 8190; // Only taken yahtzee
-	test->roll_num = 62; // Entering first roll of second turn
-	test->dice = d;
-	test->up_bonus = 62;
-	test->y_bonus = 1; // Yahtzee bonus is available
+	state test;
+	test.sc_status = 8190; // Only taken yahtzee
+	test.roll_num = 62; // Entering first roll of second turn
+	test.dice = d;
+	test.up_bonus = 62;
+	test.y_bonus = 1; // Yahtzee bonus is available
 
 	Yahtzee y(test);
 	std::string temp;
@@ -268,6 +260,5 @@ int main() {
 			selected_dice = y.selectDice(temp);
 		}
 	}
-	delete test;
 	return 0;
 }
