@@ -9,14 +9,14 @@
 #include <iostream>
 #include <bitset> // print out bits
 #include <algorithm> // sort
-#include <cstdlib> // rand
+#include <cstdlib> // rand, atoi
 #include <ctime> // time() used to seed RNG
 #include <string>
 #include <unordered_map>
 #include "Yahtzee.h"
 
 // Begins a game from specified state
-Yahtzee::Yahtzee(state * start_state) {
+Yahtzee::Yahtzee(state * start_state) { // Copy here, by reference everywhere else
 	empty_constructor = false; // Tells destructor to not delete state ptr
 	score = 0;
 	st = start_state;
@@ -24,7 +24,7 @@ Yahtzee::Yahtzee(state * start_state) {
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
-	int curr_combo[10];
+	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
 	int combo_count = 1;
 	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	curr_state_id = !st ? (0x1 << 28) : 0; //Start state of new game
@@ -46,7 +46,7 @@ Yahtzee::Yahtzee() {
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
-	int curr_combo[10];
+	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
 	int combo_count = 0;
 	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	std::cout << "Dice state map size = " << dice_state_map.size() << "\n";
@@ -88,7 +88,6 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
 				for(int i = 0; i <= curr_index; i += 2) {
 					std::cout << curr_combo[i] << ": " << curr_combo[i+1] << std::endl;
 				}
-
 				combo_count++;
 			}
 			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
@@ -115,7 +114,7 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
 void Yahtzee::setStateId(state * s) {
 	curr_state_id = ((long)s->roll_num << 28) | ((long)s->sc_status << 15) | ((long)getDiceStateId(s) << 7) |
 			((long)s->up_bonus << 1) | ((long)s->y_bonus);
-	return;
+	return; // Fix order: sc, upper bonus, y_bonus, roll, dice state
 }
 
 /*
@@ -142,6 +141,9 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
  * Return possible results of 0-252 as an unsigned char (8 bits).
  */
 unsigned char Yahtzee::getDiceStateId(state * s) {
+	if(s == nullptr) // When turn ends, takeSection passes in nullptr
+		return 0; // Dice state 0 represents beginning of new turn (no dice roll yet)
+	//Add null roll check
 	std::vector<int> dice_copy = s->dice; // Create copy of dice because dice must be sorted
 	std::sort(dice_copy.begin(), dice_copy.end());
 	// First put dice number and frequencies into arrays:
@@ -160,9 +162,10 @@ unsigned char Yahtzee::getDiceStateId(state * s) {
 	// For testing purposes
 	for(int i = 0; i < 5; i++)
 		std::cout << dice_multisets[i*2] << ": " << dice_multisets[i*2 + 1] << std::endl;
-	/*int key = getDiceKey(dice_multisets);
-	//return dice_state_map.at(key);*/
-	return 254;
+
+	int key = getDiceKey(dice_multisets);
+	std::cout << key << "\n";
+	return dice_state_map.at(key);
 }
 
 char Yahtzee::setUpperBonusStateId() {
@@ -181,7 +184,7 @@ long Yahtzee::getStateId() {
 void Yahtzee::roll(std::string& kept_dice) {
 	bool is_roll[5] = {true, true, true, true, true};
 	for(unsigned int i = 0; i < kept_dice.size(); i++)
-		is_roll[(int)kept_dice[i] - 49] = false;
+		is_roll[(int)kept_dice[i] - 49] = false; // convert char to int and subtract 49 for correct integer
 	for(int i = 0; i < 5; i++) {
 		if(is_roll[i])
 			st->dice.at(i) = (rand() % 6) + 1; // Generate number between 1 and 6
@@ -254,8 +257,9 @@ int main() {
 	test->y_bonus = 1; // Yahtzee bonus is available
 
 	Yahtzee y(test);
-	/*std::string temp;
+	std::string temp;
 	for(int i = 0; i < 10; i++) {
+		std::cout << "Hello!" << std::endl;
 		y.roll(temp);
 		int selected_dice = -1;
 		while(selected_dice == -1) {
@@ -263,7 +267,7 @@ int main() {
 			std::getline(std::cin, temp);
 			selected_dice = y.selectDice(temp);
 		}
-	}*/
+	}
 	delete test;
 	return 0;
 }

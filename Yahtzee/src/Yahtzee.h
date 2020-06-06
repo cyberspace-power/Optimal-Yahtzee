@@ -22,6 +22,13 @@ typedef struct state {
 	std::vector<int> dice;
 } state;
 
+typedef struct state2 {
+	unsigned int up_bonus;
+	bool y_bonus;
+	unsigned short sc_status; //scorecard status --> what sections remain
+	char roll_num;
+} state2;
+
 class Yahtzee {
   public:
 	Yahtzee(state * start_state);
