@@ -201,7 +201,7 @@ void Yahtzee::roll(std::string& kept_dice) {
  * This sanitized input (passed by reference to allow changes to the input)
  * is intended to be passed directly to roll.
  */
-int Yahtzee::selectDice(std::string& input) {
+int Yahtzee::selectDice(std::string& input) { 										// Return kept dice state ID number (0-31)
 	// If getline is used to collect input, it adds null terminated characters
 	// Following if statement gets rid of it
 	if(input[input.size() - 1] < 32)

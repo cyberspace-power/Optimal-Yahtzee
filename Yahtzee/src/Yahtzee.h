@@ -41,7 +41,7 @@ class Yahtzee {
 	char setUpperBonusStateId();
 	void roll(std::string& kept_dice);
 	int selectDice(std::string& input);
-	void takeSection();
+	int takeSection();
 
   private:
 	int up_total;
