@@ -20,14 +20,8 @@ typedef struct state {
 	unsigned short sc_status; //scorecard status --> what sections remain
 	char roll_num;
 	std::vector<int> dice;
+	bool is_new_turn; // Aids getDiceStateId --> if true: return dice state 0 = no roll yet
 } state;
-
-typedef struct state2 {
-	unsigned int up_bonus;
-	bool y_bonus;
-	unsigned short sc_status; //scorecard status --> what sections remain
-	char roll_num;
-} state2;
 
 class Yahtzee {
   public:
@@ -39,7 +33,7 @@ class Yahtzee {
 	int getDiceKey(int (&dice_multisets)[10]); // Helper for getDiceStateId()
 	unsigned char getDiceStateId(state &s);
 	char setUpperBonusStateId();
-	void roll(std::string& kept_dice);
+	void roll(int kept_dice_state);
 	int selectDice(std::string& input);
 	int takeSection();
 

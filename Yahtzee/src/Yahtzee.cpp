@@ -23,13 +23,12 @@ Yahtzee::Yahtzee(state start_state) {
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
-	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
+	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 	int combo_count = 1;
 	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
-	curr_state_id = !st ? (0x1 << 28) : 0; //Start state of new game
 	setStateId(st);
 	// print state in bits to diagnose any errors
-	std::bitset<34> b(curr_state_id);
+	std::bitset<64> b(curr_state_id);
 	std::cout << "Current State ID = " << b << std::endl;
 	srand(time(0)); // Set seed for RNG
 
@@ -48,13 +47,14 @@ Yahtzee::Yahtzee() {
 	int combo_count = 0;
 	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	std::cout << "Dice state map size = " << dice_state_map.size() << "\n";
-	curr_state_id = 1 << 28; // Initial state at beginning of new game
+	curr_state_id = 1 << 8; // Initial state at beginning of new game
 	std::vector<int> d(5,1);
 	st.dice = d;
 	st.roll_num = 1;
 	st.sc_status = 0;
 	st.up_bonus = 0;
 	st.y_bonus = 0;
+	st.is_new_turn = true;
 	srand(time(0)); // Set seed for RNG
 }
 
@@ -76,10 +76,10 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
 				dice_state_map[getDiceKey(curr_combo)] = combo_count;
 
 				// Print for testing purposes
-				std::cout << combo_count << std::endl;
+				/*std::cout << combo_count << std::endl;
 				for(int i = 0; i <= curr_index; i += 2) {
 					std::cout << curr_combo[i] << ": " << curr_combo[i+1] << std::endl;
-				}
+				}*/
 				combo_count++;
 			}
 			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
@@ -133,9 +133,8 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
  * Return possible results of 0-252 as an unsigned char (8 bits).
  */
 unsigned char Yahtzee::getDiceStateId(state &s) {
-	if(s == nullptr) // When turn ends, takeSection passes in nullptr
-		return 0; // Dice state 0 represents beginning of new turn (no dice roll yet)
-	//Add null roll check
+	if(s.is_new_turn)
+		return 0; // No roll yet this turn. Return empty dice state
 	std::vector<int> dice_copy = s.dice; // Create copy of dice because dice must be sorted
 	std::sort(dice_copy.begin(), dice_copy.end());
 	// First put dice number and frequencies into arrays:
@@ -151,12 +150,12 @@ unsigned char Yahtzee::getDiceStateId(state &s) {
 			dice_multisets[numbers*2 + 1]++;
 		}
 	}
+	int key = getDiceKey(dice_multisets);
 	// For testing purposes
-	for(int i = 0; i < 5; i++)
+	/*for(int i = 0; i < 5; i++)
 		std::cout << dice_multisets[i*2] << ": " << dice_multisets[i*2 + 1] << std::endl;
 
-	int key = getDiceKey(dice_multisets);
-	std::cout << key << "\n";
+	std::cout << key << "\n";*/
 	return dice_state_map.at(key);
 }
 
@@ -173,10 +172,13 @@ long Yahtzee::getStateId() {
  * Rolls non-kept dice. The kept_dice parameter is the same as the input
  * parameter from the selectDice function (see below)
  */
-void Yahtzee::roll(std::string& kept_dice) {
+void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of kept_dice_state
+	st.is_new_turn = false; // If you are rolling, the turn has begun or is continuing
 	bool is_roll[5] = {true, true, true, true, true};
-	for(unsigned int i = 0; i < kept_dice.size(); i++)
-		is_roll[(int)kept_dice[i] - 49] = false; // convert char to int and subtract 49 for correct integer
+	for(unsigned int i = 0; i < 5; i++) {
+		if(kept_dice_state & (1 << i)) // if ith bit is true, that dice is held
+			is_roll[i] = false;
+	}
 	for(int i = 0; i < 5; i++) {
 		if(is_roll[i])
 			st.dice.at(i) = (rand() % 6) + 1; // Generate number between 1 and 6
@@ -197,11 +199,11 @@ void Yahtzee::roll(std::string& kept_dice) {
 
 /*
  * This function exists to sanitize input the user inputs for
- * dice they want to keep. Invalid inputs return -1, valid ones return 0.
+ * dice they want to keep. Invalid inputs return -1, valid ones return a number between 0-30.
  * This sanitized input (passed by reference to allow changes to the input)
  * is intended to be passed directly to roll.
  */
-int Yahtzee::selectDice(std::string& input) { 										// Return kept dice state ID number (0-31)
+int Yahtzee::selectDice(std::string& input) {
 	// If getline is used to collect input, it adds null terminated characters
 	// Following if statement gets rid of it
 	if(input[input.size() - 1] < 32)
@@ -222,6 +224,7 @@ int Yahtzee::selectDice(std::string& input) { 										// Return kept dice stat
 	// Sort in ascending order so the last dices' values are not accidentally eliminated
 	// See comment later in this function
 	std::sort(dice_to_keep.begin(), dice_to_keep.end());
+	int kept_dice_state = 0;
 
 	// Next, check for invalid inputs (characters other than numbers 1-5 or duplicated characters)
 	if(dice_to_keep[0] < '1' || dice_to_keep[dice_to_keep.size() - 1] > '5') {
@@ -234,8 +237,9 @@ int Yahtzee::selectDice(std::string& input) { 										// Return kept dice stat
 			std::cout << "Invalid input. Please do not duplicate values. Was this in error? Try again.\n";
 			return -1;
 		}
+		kept_dice_state |= (1 << (dice_to_keep[i] - 49)); // bits 1-5 represent dice kept
 	}
-	return 0;
+	return kept_dice_state;
 }
 
 int main() {
@@ -247,18 +251,19 @@ int main() {
 	test.dice = d;
 	test.up_bonus = 62;
 	test.y_bonus = 1; // Yahtzee bonus is available
+	test.is_new_turn = false;
 
 	Yahtzee y(test);
 	std::string temp;
+	int selected_dice = 0;
 	for(int i = 0; i < 10; i++) {
-		std::cout << "Hello!" << std::endl;
-		y.roll(temp);
-		int selected_dice = -1;
-		while(selected_dice == -1) {
+		y.roll(selected_dice);
+		do {
 			std::cout << "\nSelect which dice to keep: ";
 			std::getline(std::cin, temp);
 			selected_dice = y.selectDice(temp);
-		}
+		} while(selected_dice == -1);
+		std::cout << "Kept Id #: " << selected_dice << std::endl;
 	}
 	return 0;
 }
