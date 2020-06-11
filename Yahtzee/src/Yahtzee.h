@@ -49,27 +49,38 @@ class Yahtzee {
 	Yahtzee(state start_state);
 	Yahtzee();
 
+	// Dice Id functions:
 	void setDiceMap(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
 	int getDiceKey(int (&dice_multisets)[10]); // Helper for getDiceStateId()
 	unsigned char getDiceStateId();
+
 	// State Id Functions:
-	long getStateId();
 	void setStateId();
 	char setUpperBonusStateId();
+	long getStateId();
 
 	// Roll Functions:
 	void roll(int kept_dice_state);
 	int selectDice(std::string& input);
 
 	// Scoring Funtions:
+	void setScoringMap();
+	bool is3OfKind(int (&curr_combo)[10]);
+	bool is4OfKind(int (&curr_combo)[10]);
+	bool isFullHouse(int (&curr_combo)[10]);
+	bool isSmallStraight(int (&curr_combo)[10]);
+	bool isLargeStraight(int (&curr_combo)[10]);
+	bool isYahtzee(int (&curr_combo)[10]);
 	int takeSection(int section);
 
   private:
 	int up_total;
 	long curr_state_id;
 	state st;
+	scorecard sc;
 	int score;
 	std::unordered_map<int, int> dice_state_map;
+	std::unordered_map<int, int> dice_scoring_map;
 
 };
 

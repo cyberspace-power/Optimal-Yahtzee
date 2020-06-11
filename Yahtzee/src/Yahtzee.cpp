@@ -95,21 +95,6 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
 }
 
 /*
- * Takes in current state and sets the current state id
- * Condenses all game states into one general game state
- * Does this by compressing states like the following:
- *  Roll # | Scorecard state | Dice state | Upper Bonus State | Yahtzee Bonus State
- *  6 bits |     13 bits     |   8 bits   |      6 bits       |        1 bit	   = 34 bits
- * These states are strategically organized such that the probability calculations
- * later will be done close to the order of the states in a sorted state table
- */
-void Yahtzee::setStateId() {
-	curr_state_id = ((long)st.sc_status << 21) | ((long)st.up_bonus << 15) | ((long)st.y_bonus << 14) |
-				((long)st.roll_num << 8) |  ((long)getDiceStateId());
-	return;
-}
-
-/*
  * Helper function for getDiceStateId
  * Simply calculates and returns key for the unordered mapping
  */
@@ -157,6 +142,21 @@ unsigned char Yahtzee::getDiceStateId() {
 
 	std::cout << key << "\n";*/
 	return dice_state_map.at(key);
+}
+
+/*
+ * Takes in current state and sets the current state id
+ * Condenses all game states into one general game state
+ * Does this by compressing states like the following:
+ *  Roll # | Scorecard state | Dice state | Upper Bonus State | Yahtzee Bonus State
+ *  6 bits |     13 bits     |   8 bits   |      6 bits       |        1 bit	   = 34 bits
+ * These states are strategically organized such that the probability calculations
+ * later will be done close to the order of the states in a sorted state table
+ */
+void Yahtzee::setStateId() {
+	curr_state_id = ((long)st.sc_status << 21) | ((long)st.up_bonus << 15) | ((long)st.y_bonus << 14) |
+				((long)st.roll_num << 8) |  ((long)getDiceStateId());
+	return;
 }
 
 char Yahtzee::setUpperBonusStateId() {
@@ -220,6 +220,37 @@ int Yahtzee::takeSection(int section) {
 		return -1;
 	}
 
+	switch(section)
+	{
+	case 1: // Ones
+		break;
+	case 2: // Twos
+		break;
+	case 3: // Threes
+		break;
+	case 4: // Fours
+		break;
+	case 5: // Ones
+		break;
+	case 6: // Twos
+		break;
+	case 7: // Three of a Kind
+		break;
+	case 8: // Four of a Kind
+		break;
+	case 9: // Full House
+		break;
+	case 10: // Small Straight
+		break;
+	case 11: // Large Straight
+		break;
+	case 12: // Yahtzee
+		break;
+	case 13: // Chance
+		break;
+	}
+	// Add to scores (upper, total, upper_bonus, yahtzee bonus)
+
 	// Handle current state stuff
 	// Since we start a new turn, move the roll number to the beginning of
 	// the next turn. The following equation ensures that will always be a
@@ -274,6 +305,7 @@ int Yahtzee::selectDice(std::string& input) {
 	}
 	return kept_dice_state;
 }
+
 
 int main() {
 	//std::cout << "Welcome to the yahtzee program!" << std::endl; // prints Hello World!!!
