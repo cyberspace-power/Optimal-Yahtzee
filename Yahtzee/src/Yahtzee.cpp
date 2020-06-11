@@ -173,7 +173,13 @@ long Yahtzee::getStateId() {
  * parameter from the selectDice function (see below)
  */
 void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of kept_dice_state
-	st.is_new_turn = false; // If you are rolling, the turn has begun or is continuing
+	// If is_new_turn is true, then the takeSection method will have already changed the roll
+	// number. However, we must still reset the new_turn bool value to false. Otherwise, we
+	// are in the middle of a turn, and must increment the roll number
+	if(st.is_new_turn)
+		st.is_new_turn = false; // If you are rolling, the turn has begun or is continuing
+	else
+		st.roll_num++;
 	bool is_roll[5] = {true, true, true, true, true};
 	for(unsigned int i = 0; i < 5; i++) {
 		if(kept_dice_state & (1 << i)) // if ith bit is true, that dice is held
@@ -193,8 +199,35 @@ void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of k
 			std::cout << st.dice[i] << "*, ";
 	}
 	std::cout << std::endl;
-	getDiceStateId(st);
+	setStateId(st);
 	return;
+}
+
+/*
+ * Parameter: Section is a number 1-13 representing scorecard section
+ * This function will check if section has already been taken and if not,
+ * will "take" that section for the user, granting the appropriate number
+ * of points. The return value will return the number of points scored,
+ * or -1 upon failure (section has already been taken or input number is bad)
+ */
+int Yahtzee::takeSection(int section) {
+	if(curr_state_id & (1 << (section + 21))) {
+		std::cout << "You have already taken this section. Try again\n";
+		return -1;
+	}
+	else if(section < 1 || section > 13) {
+		std::cout << "Please enter a valid number 1-13 corresponding to a section you have not yet taken.\n";
+		return -1;
+	}
+
+	// Handle current state stuff
+	// Since we start a new turn, move the roll number to the beginning of
+	// the next turn. The following equation ensures that will always be a
+	// number where x % 3 = 1.
+	st.roll_num = (st.roll_num + 3) - ((st.roll_num-1) % 3);
+	st.is_new_turn = true;
+	setStateId(st);
+	return 0;
 }
 
 /*
