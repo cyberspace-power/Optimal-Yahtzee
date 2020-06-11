@@ -26,7 +26,7 @@ Yahtzee::Yahtzee(state start_state) {
 	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 	int combo_count = 1;
 	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
-	setStateId(st);
+	setStateId();
 	// print state in bits to diagnose any errors
 	std::bitset<64> b(curr_state_id);
 	std::cout << "Current State ID = " << b << std::endl;
@@ -103,9 +103,9 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
  * These states are strategically organized such that the probability calculations
  * later will be done close to the order of the states in a sorted state table
  */
-void Yahtzee::setStateId(state &s) {
-	curr_state_id = ((long)s.sc_status << 21) | ((long)s.up_bonus << 15) | ((long)s.y_bonus << 14) |
-				((long)s.roll_num << 8) |  ((long)getDiceStateId(s));
+void Yahtzee::setStateId() {
+	curr_state_id = ((long)st.sc_status << 21) | ((long)st.up_bonus << 15) | ((long)st.y_bonus << 14) |
+				((long)st.roll_num << 8) |  ((long)getDiceStateId());
 	return;
 }
 
@@ -132,10 +132,10 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
  * to 8 bits. Use hashmap or dict(?) lookup to quickly determine it's id.
  * Return possible results of 0-252 as an unsigned char (8 bits).
  */
-unsigned char Yahtzee::getDiceStateId(state &s) {
-	if(s.is_new_turn)
+unsigned char Yahtzee::getDiceStateId() {
+	if(st.is_new_turn)
 		return 0; // No roll yet this turn. Return empty dice state
-	std::vector<int> dice_copy = s.dice; // Create copy of dice because dice must be sorted
+	std::vector<int> dice_copy = st.dice; // Create copy of dice because dice must be sorted
 	std::sort(dice_copy.begin(), dice_copy.end());
 	// First put dice number and frequencies into arrays:
 	int dice_multisets[10] = {0,0,0,0,0,0,0,0,0,0};
@@ -199,7 +199,7 @@ void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of k
 			std::cout << st.dice[i] << "*, ";
 	}
 	std::cout << std::endl;
-	setStateId(st);
+	setStateId();
 	return;
 }
 
@@ -226,7 +226,7 @@ int Yahtzee::takeSection(int section) {
 	// number where x % 3 = 1.
 	st.roll_num = (st.roll_num + 3) - ((st.roll_num-1) % 3);
 	st.is_new_turn = true;
-	setStateId(st);
+	setStateId();
 	return 0;
 }
 
