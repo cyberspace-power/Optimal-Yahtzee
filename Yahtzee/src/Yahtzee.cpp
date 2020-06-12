@@ -23,9 +23,10 @@ Yahtzee::Yahtzee(state start_state) {
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
+	dice_scoring_map.reserve(252);
 	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 	int combo_count = 1;
-	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
+	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	setStateId();
 	// print state in bits to diagnose any errors
 	std::bitset<64> b(curr_state_id);
@@ -43,9 +44,10 @@ Yahtzee::Yahtzee() {
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
+	dice_scoring_map.reserve(252);
 	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
 	int combo_count = 0;
-	setDiceMap(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
+	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	std::cout << "Dice state map size = " << dice_state_map.size() << "\n";
 	curr_state_id = 1 << 8; // Initial state at beginning of new game
 	std::vector<int> d(5,1);
@@ -59,13 +61,13 @@ Yahtzee::Yahtzee() {
 }
 
 /*
- * Purpose: Set the dice state map to allow for constant time lookups
+ * Purpose: Set the dice state map and dice scoring map to allow for constant time lookups
  *    The unordered_map from STL is used to track this mapping
  * Style: Recursive function that iterates through all possible
  *    dice combinations and maps them to the number of mapped combos
  *    to that point (i.e. A number between 1-252)
  */
-void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
+void Yahtzee::setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
 	for(int i = min; i <= 6; i++) {
 		curr_combo[curr_index] = i;
 		for(int j = freq_left; j > 0; j--) {
@@ -74,6 +76,7 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
 				if(dice_state_map.find(getDiceKey(curr_combo)) != dice_state_map.end())
 					std::cout << "Error -- Element already exists\n";
 				dice_state_map[getDiceKey(curr_combo)] = combo_count;
+				dice_scoring_map[combo_count] = setScoringMapValue(curr_combo);
 
 				// Print for testing purposes
 				/*std::cout << combo_count << std::endl;
@@ -85,7 +88,7 @@ void Yahtzee::setDiceMap(int freq_left, int min, int curr_index, int (&curr_comb
 			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
 				break;
 			else // recurse to next highest number and place in combo array
-				setDiceMap(freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
+				setDiceMaps(freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
 		}
 	}
 	// About to return to previous recursion. Reset array values to 0
@@ -204,6 +207,116 @@ void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of k
 }
 
 /*
+ * This function exists to sanitize input the user inputs for
+ * dice they want to keep. Invalid inputs return -1, valid ones return a number between 0-30.
+ * This sanitized input (passed by reference to allow changes to the input)
+ * is intended to be passed directly to roll.
+ */
+int Yahtzee::selectDice(std::string& input) {
+	// If getline is used to collect input, it adds null terminated characters
+	// Following if statement gets rid of it
+	if(input[input.size() - 1] < 32)
+		input = input.substr(0, input.size() - 1);
+	// If no input is selected, return normally and all dice will be rolled
+	if(input.size() == 0)
+		return 0;
+	//
+	if(input.size() > 4) {
+		std::cout << "Your input is too large. You can select no more than 4 dice to keep.\n"
+				<< "If you want to keep all the dice, then please select a section to take.\n";
+		return -1;
+	}
+	// First, put all dice intended to keep into sorted vector of 1-4 values
+	std::vector<char> dice_to_keep;
+	for(unsigned int i = 0; i < input.size(); i++)
+		dice_to_keep.push_back(input[i]);
+	// Sort in ascending order so the last dices' values are not accidentally eliminated
+	// See comment later in this function
+	std::sort(dice_to_keep.begin(), dice_to_keep.end());
+	int kept_dice_state = 0;
+
+	// Next, check for invalid inputs (characters other than numbers 1-5 or duplicated characters)
+	if(dice_to_keep[0] < '1' || dice_to_keep[dice_to_keep.size() - 1] > '5') {
+		//std::cout << (int)dice_to_keep[0] << " " << (int)dice_to_keep[dice_to_keep.size() - 1] << std::endl;
+		std::cout << "Invalid input. Please only enter characters between 1 and 5.\n";
+		return -1;
+	}
+	for(unsigned int i = 0; i < dice_to_keep.size(); i++) {
+		if(i > 0 && dice_to_keep[i] == dice_to_keep[i-1]) {
+			std::cout << "Invalid input. Please do not duplicate values. Was this in error? Try again.\n";
+			return -1;
+		}
+		kept_dice_state |= (1 << (dice_to_keep[i] - 49)); // bits 1-5 represent dice kept
+	}
+	return kept_dice_state;
+}
+
+/*
+ * If the frequency of any of the first three numbers is 3 or more: true
+ * Do not need to check after first three dice numbers because if more
+ * than three dice numbers exist in the dice state, it cannot be a 3 of a kind.
+ */
+bool Yahtzee::is3OfKind(int (&curr_combo)[10]) {
+	return (curr_combo[1] >= 3 || curr_combo[3] >= 3 || curr_combo[5] >= 3);
+}
+
+/*
+ * If the frequency of any of the first two numbers is 4 or more: true
+ * Do not need to check after first two dice numbers because if more
+ * than two dice numbers exist in the dice state, it cannot be a 4 of a kind.
+ */
+bool Yahtzee::is4OfKind(int (&curr_combo)[10]) {
+	return (curr_combo[1] >= 4 || curr_combo[3] >= 4);
+}
+
+/*
+ * if there are no more than 2 dice numbers AND the frequency of one of the
+ * numbers is 2 or 3, then the other number must be the other of 2 or 3 frequency,
+ * meaning that the result is a full house
+ */
+bool Yahtzee::isFullHouse(int (&curr_combo)[10]) {
+	return (curr_combo[4] == 0 && (curr_combo[1] == 2 || curr_combo[1] == 3));
+}
+
+// if the 1st and 4th OR 2nd and 5th are 3 apart: true
+bool Yahtzee::isSmallStraight(int (&curr_combo)[10]) {
+	return (curr_combo[0] + 3 == curr_combo[6] || curr_combo[2] + 3 == curr_combo[8]);
+}
+
+// if the 1st and 5th dice numbers are 4 apart: true
+bool Yahtzee::isLargeStraight(int (&curr_combo)[10]) {
+	return (curr_combo[0] + 4 == curr_combo[8]);
+}
+
+// if the frequency of the only number is 5: true
+bool Yahtzee::isYahtzee(int (&curr_combo)[10]) {
+	return (curr_combo[1] == 5);
+}
+
+/*
+ * Return integer to map to dice state id to allow quick scoring lookups
+ * Does this by compressing states like the following:
+ * Dice Sum | isYahtzee | isLS | isSS | isFH | is4oK | is3oK |   6s   |   5s   |   4s   |   3s   |   2s   |   1s   |
+ *  5 bits  |   1 bit   | 1 bit| 1 bit| 1 bit| 1 bit | 1 bit | 3 bits | 3 bits | 3 bits | 3 bits | 3 bits | 3 bits |
+ *  = 29 total bits < 32 bits --> Fits in an integer
+ */
+int Yahtzee::setScoringMapValue(int (&curr_combo)[10]) {
+	int sum = 0;
+	int score_data = 0; // Return value
+	for(int i = 0; i < 5 && curr_combo[i] != 0; i += 2) {
+		sum += (curr_combo[i] * curr_combo[i+1]);
+		// Left shift the frequency of dice number to the left 3*dice number
+		score_data |= (curr_combo[i+1] << (3*(curr_combo[i] - 1)));
+	}
+
+	score_data |= (sum << 24) | ((int)isYahtzee(curr_combo) << 23) | ((int)isLargeStraight(curr_combo) << 22) |
+			((int)isSmallStraight(curr_combo) << 21) | ((int)isFullHouse(curr_combo) << 20) |
+			((int)is4OfKind(curr_combo) << 19) | ((int)is3OfKind(curr_combo) << 18);
+
+	return score_data;
+}
+
+/*
  * Parameter: Section is a number 1-13 representing scorecard section
  * This function will check if section has already been taken and if not,
  * will "take" that section for the user, granting the appropriate number
@@ -261,49 +374,8 @@ int Yahtzee::takeSection(int section) {
 	return 0;
 }
 
-/*
- * This function exists to sanitize input the user inputs for
- * dice they want to keep. Invalid inputs return -1, valid ones return a number between 0-30.
- * This sanitized input (passed by reference to allow changes to the input)
- * is intended to be passed directly to roll.
- */
-int Yahtzee::selectDice(std::string& input) {
-	// If getline is used to collect input, it adds null terminated characters
-	// Following if statement gets rid of it
-	if(input[input.size() - 1] < 32)
-		input = input.substr(0, input.size() - 1);
-	// If no input is selected, return normally and all dice will be rolled
-	if(input.size() == 0)
-		return 0;
-	//
-	if(input.size() > 4) {
-		std::cout << "Your input is too large. You can select no more than 4 dice to keep.\n"
-				<< "If you want to keep all the dice, then please select a section to take.\n";
-		return -1;
-	}
-	// First, put all dice intended to keep into sorted vector of 1-4 values
-	std::vector<char> dice_to_keep;
-	for(unsigned int i = 0; i < input.size(); i++)
-		dice_to_keep.push_back(input[i]);
-	// Sort in ascending order so the last dices' values are not accidentally eliminated
-	// See comment later in this function
-	std::sort(dice_to_keep.begin(), dice_to_keep.end());
-	int kept_dice_state = 0;
-
-	// Next, check for invalid inputs (characters other than numbers 1-5 or duplicated characters)
-	if(dice_to_keep[0] < '1' || dice_to_keep[dice_to_keep.size() - 1] > '5') {
-		//std::cout << (int)dice_to_keep[0] << " " << (int)dice_to_keep[dice_to_keep.size() - 1] << std::endl;
-		std::cout << "Invalid input. Please only enter characters between 1 and 5.\n";
-		return -1;
-	}
-	for(unsigned int i = 0; i < dice_to_keep.size(); i++) {
-		if(i > 0 && dice_to_keep[i] == dice_to_keep[i-1]) {
-			std::cout << "Invalid input. Please do not duplicate values. Was this in error? Try again.\n";
-			return -1;
-		}
-		kept_dice_state |= (1 << (dice_to_keep[i] - 49)); // bits 1-5 represent dice kept
-	}
-	return kept_dice_state;
+scorecard Yahtzee::getScorecard() {
+	return sc;
 }
 
 
@@ -319,7 +391,7 @@ int main() {
 	test.is_new_turn = false;
 
 	Yahtzee y(test);
-	std::string temp;
+	/*std::string temp;
 	int selected_dice = 0;
 	for(int i = 0; i < 10; i++) {
 		y.roll(selected_dice);
@@ -329,6 +401,9 @@ int main() {
 			selected_dice = y.selectDice(temp);
 		} while(selected_dice == -1);
 		std::cout << "Kept Id #: " << selected_dice << std::endl;
-	}
+	}*/
+	int x[10] = {6, 5, 0, 0, 0, 0, 0, 0, 0, 0}; // one 1, one 5, three 6s
+	std::cout << "Scoring Map Value = " << y.setScoringMapValue(x) << std::endl;
+
 	return 0;
 }

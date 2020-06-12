@@ -50,7 +50,7 @@ class Yahtzee {
 	Yahtzee();
 
 	// Dice Id functions:
-	void setDiceMap(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
 	int getDiceKey(int (&dice_multisets)[10]); // Helper for getDiceStateId()
 	unsigned char getDiceStateId();
 
@@ -64,7 +64,7 @@ class Yahtzee {
 	int selectDice(std::string& input);
 
 	// Scoring Funtions:
-	void setScoringMap();
+	int setScoringMapValue(int (&curr_combo)[10]);
 	bool is3OfKind(int (&curr_combo)[10]);
 	bool is4OfKind(int (&curr_combo)[10]);
 	bool isFullHouse(int (&curr_combo)[10]);
@@ -72,6 +72,7 @@ class Yahtzee {
 	bool isLargeStraight(int (&curr_combo)[10]);
 	bool isYahtzee(int (&curr_combo)[10]);
 	int takeSection(int section);
+	scorecard getScorecard();
 
   private:
 	int up_total;
