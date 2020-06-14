@@ -17,9 +17,12 @@
 
 // Begins a game from specified state
 Yahtzee::Yahtzee(state start_state) {
-	score = 0;
 	st = start_state;
-
+	if(st.y_bonus_state && (((st.sc_status>>11) & 1) != 1)) {
+		// Makes sure user didn't accidentally set y_bonus to available if yahtzee has not been taken
+		st.y_bonus_state = false;
+		std::cout << "Had to reset y_bonus to false\n";
+	}
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
@@ -27,7 +30,7 @@ Yahtzee::Yahtzee(state start_state) {
 	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 	int combo_count = 1;
 	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
-	setStateId();
+	updateStateId();
 	// print state in bits to diagnose any errors
 	std::bitset<64> b(curr_state_id);
 	std::cout << "Current State ID = " << b << std::endl;
@@ -38,9 +41,6 @@ Yahtzee::Yahtzee(state start_state) {
 
 // Begins a game from the beginning. Do not jump to specific state.
 Yahtzee::Yahtzee() {
-	up_total = 0;
-	score = 0;
-
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
@@ -48,14 +48,13 @@ Yahtzee::Yahtzee() {
 	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
 	int combo_count = 0;
 	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
-	std::cout << "Dice state map size = " << dice_state_map.size() << "\n";
 	curr_state_id = 1 << 8; // Initial state at beginning of new game
 	std::vector<int> d(5,1);
 	st.dice = d;
 	st.roll_num = 1;
 	st.sc_status = 0;
-	st.up_bonus = 0;
-	st.y_bonus = 0;
+	st.up_total = 0;
+	st.y_bonus_state = 0;
 	st.is_new_turn = true;
 	srand(time(0)); // Set seed for RNG
 }
@@ -79,10 +78,16 @@ void Yahtzee::setDiceMaps(int freq_left, int min, int curr_index, int (&curr_com
 				dice_scoring_map[combo_count] = setScoringMapValue(curr_combo);
 
 				// Print for testing purposes
-				/*std::cout << combo_count << std::endl;
+				/*std::cout << combo_count << ": " << std::endl;
 				for(int i = 0; i <= curr_index; i += 2) {
-					std::cout << curr_combo[i] << ": " << curr_combo[i+1] << std::endl;
-				}*/
+					std::cout << curr_combo[i] << ": " << curr_combo[i+1] << ", ";
+				}
+				std::cout << std::endl;
+				int temp = dice_scoring_map[combo_count];
+				printf("Sum = %d\n3oK: %d; 4oK: %d; FH: %d; SS: %d; LS: %d; Yah: %d\n1s: %d; 2s: %d; 3s: %d; 4s: %d; 5s: %d; 6s: %d\n\n",
+						temp>>24, (int)is3OfKind(curr_combo), (int)is4OfKind(curr_combo), (int)isFullHouse(curr_combo),
+						(int)isSmallStraight(curr_combo), (int)isLargeStraight(curr_combo), (int)isYahtzee(curr_combo),
+						temp & 0x7, (temp>>3) & 0x7, (temp>>6) & 0x7, (temp>>9) & 0x7, (temp>>12) & 0x7, (temp>>15) & 0x7);*/
 				combo_count++;
 			}
 			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
@@ -107,11 +112,6 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
 	int key = 0;
 	for(int i = 0; i < 5; i++)
 		key |= (dice_multisets[i*2] << ((i*6) + 3)) | (dice_multisets[i*2 + 1] << (i*6));
-	// For testing purposes
-	/*std::bitset<30> bit(key);
-	std::cout << "Key = " << key << std::endl;
-	std::cout << "Key(binary) = " << bit << std::endl;*/
-
 	return key;
 }
 
@@ -122,7 +122,7 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
  */
 unsigned char Yahtzee::getDiceStateId() {
 	if(st.is_new_turn)
-		return 0; // No roll yet this turn. Return empty dice state
+		return 0; // No roll yet this turn. Return empty dice state (Only happens after taking section)
 	std::vector<int> dice_copy = st.dice; // Create copy of dice because dice must be sorted
 	std::sort(dice_copy.begin(), dice_copy.end());
 	// First put dice number and frequencies into arrays:
@@ -156,15 +156,15 @@ unsigned char Yahtzee::getDiceStateId() {
  * These states are strategically organized such that the probability calculations
  * later will be done close to the order of the states in a sorted state table
  */
-void Yahtzee::setStateId() {
-	curr_state_id = ((long)st.sc_status << 21) | ((long)st.up_bonus << 15) | ((long)st.y_bonus << 14) |
+void Yahtzee::updateStateId() {
+	curr_state_id = ((long)st.sc_status << 21) | ((long)setUpperBonusStateId() << 15) | ((long)st.y_bonus_state << 14) |
 				((long)st.roll_num << 8) |  ((long)getDiceStateId());
 	return;
 }
 
-char Yahtzee::setUpperBonusStateId() {
+unsigned char Yahtzee::setUpperBonusStateId() {
 	// If bonus has already been achieved, count no higher than 63
-	return up_total >= 63 ? 63 : up_total;
+	return st.up_total >= 63 ? 63 : st.up_total;
 }
 
 long Yahtzee::getStateId() {
@@ -175,7 +175,7 @@ long Yahtzee::getStateId() {
  * Rolls non-kept dice. The kept_dice parameter is the same as the input
  * parameter from the selectDice function (see below)
  */
-void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of kept_dice_state
+void Yahtzee::roll(int kept_dice_state) {
 	// If is_new_turn is true, then the takeSection method will have already changed the roll
 	// number. However, we must still reset the new_turn bool value to false. Otherwise, we
 	// are in the middle of a turn, and must increment the roll number
@@ -202,7 +202,7 @@ void Yahtzee::roll(int kept_dice_state) { // change arguemnt to take in int of k
 			std::cout << st.dice[i] << "*, ";
 	}
 	std::cout << std::endl;
-	setStateId();
+	updateStateId();
 	return;
 }
 
@@ -303,7 +303,7 @@ bool Yahtzee::isYahtzee(int (&curr_combo)[10]) {
 int Yahtzee::setScoringMapValue(int (&curr_combo)[10]) {
 	int sum = 0;
 	int score_data = 0; // Return value
-	for(int i = 0; i < 5 && curr_combo[i] != 0; i += 2) {
+	for(int i = 0; i < 10 && curr_combo[i] != 0; i += 2) {
 		sum += (curr_combo[i] * curr_combo[i+1]);
 		// Left shift the frequency of dice number to the left 3*dice number
 		score_data |= (curr_combo[i+1] << (3*(curr_combo[i] - 1)));
@@ -317,6 +317,51 @@ int Yahtzee::setScoringMapValue(int (&curr_combo)[10]) {
 }
 
 /*
+ * Purpose: Helper for takeSection(). Determines whether a section will count for
+ * 		normal point due to the yahtzee joker rule. Also used to determine whether
+ * 		the 100 point bonus should be applied
+ * Returns: True if lower section can be taken for full point total, false otherwise
+ */
+bool Yahtzee::isJoker(int scoring_info, int section) {
+	// Joker rule doesn't apply unless roll is yahtzee and yahtzee has been taken for 0 or 50 points
+	if(!isSectionTaken(12) || (scoring_info>>23 & 1) != 1)
+		return false;
+	// Determine what number the yahtzee is in
+	int yahtzee_dice_num = 0;
+	for(int i = 0; i <= 6; i++) {
+		if(scoring_info>>(3*i) & 0x7) {
+			yahtzee_dice_num = i+1;
+			break;
+		}
+	}
+
+	// You are not allowed to take lower section with the joker rule unless the corresponding upper
+	// section total of the yahtzee dice value has already been taken. This checks for that
+	switch(yahtzee_dice_num)
+	{
+	case 1: // Yahtzee on ones
+		return (!isSectionTaken(1) && section != 1) ? false : true;
+	case 2: // Yahtzee on twos
+		return (!isSectionTaken(2) && section != 2) ? false : true;
+	case 3: // Yahtzee on threes
+		return (!isSectionTaken(3) && section != 3) ? false : true;
+	case 4: // Yahtzee on fours
+		return (!isSectionTaken(4) && section != 4) ? false : true;
+	case 5: // Yahtzee on fives
+		return (!isSectionTaken(5) && section != 5) ? false : true;
+	case 6: // Yahtzee on sixes
+		return (!isSectionTaken(6) && section != 6) ? false : true;
+	default:
+		std::cout << "Error -- what was yahtzee on?\n";
+		return false;
+	}
+}
+
+bool Yahtzee::isSectionTaken(int section) {
+	return ((curr_state_id>>(21 + (section-1))) & 1);
+}
+
+/*
  * Parameter: Section is a number 1-13 representing scorecard section
  * This function will check if section has already been taken and if not,
  * will "take" that section for the user, granting the appropriate number
@@ -324,45 +369,111 @@ int Yahtzee::setScoringMapValue(int (&curr_combo)[10]) {
  * or -1 upon failure (section has already been taken or input number is bad)
  */
 int Yahtzee::takeSection(int section) {
-	if(curr_state_id & (1 << (section + 21))) {
+	if(section < 1 || section > 13) {
+		std::cout << "Please enter a valid number 1-13 corresponding to a section you have not yet taken.\n";
+		return -1;
+	}
+	else if(isSectionTaken(section)) {
 		std::cout << "You have already taken this section. Try again\n";
 		return -1;
 	}
-	else if(section < 1 || section > 13) {
-		std::cout << "Please enter a valid number 1-13 corresponding to a section you have not yet taken.\n";
-		return -1;
+	else
+		st.sc_status |= 1<<(section-1);
+	int scoring_info = dice_scoring_map[curr_state_id & 0xff]; // First get scoring info mapped by dice state ID
+	int score = 0;
+	if(section <= 6) { // If upper section (Minimizes code in cases 1-6 of switch statement)
+		score = section * ((scoring_info >> ((section-1) * 3)) & 0x7);
+		sc.upper_score += score;
+		st.up_total += score; // Increase state's upper total (may be different than scorecard's if game was started from middle state
+		sc.total_score += score;
 	}
 
 	switch(section)
 	{
 	case 1: // Ones
+		sc.ones = score;
 		break;
 	case 2: // Twos
+		sc.twos = score;
 		break;
 	case 3: // Threes
+		sc.threes = score;
 		break;
 	case 4: // Fours
+		sc.fours = score;
 		break;
-	case 5: // Ones
+	case 5: // Fives
+		sc.fives = score;
 		break;
-	case 6: // Twos
+	case 6: // Sixes
+		sc.sixes = score;
 		break;
 	case 7: // Three of a Kind
+		score = ((scoring_info>>18) & 1) ? (scoring_info>>24) : 0;
+		sc.three_of_kind = score;
+		sc.lower_score += score;
+		sc.total_score += score;
 		break;
 	case 8: // Four of a Kind
+		score = ((scoring_info>>19) & 1) ? (scoring_info>>24) : 0;
+		sc.four_of_kind = score;
+		sc.lower_score += score;
+		sc.total_score += score;
 		break;
 	case 9: // Full House
+		if(((scoring_info>>20) & 1) || isJoker(scoring_info, section)) {
+			sc.full_house = 25;
+			sc.lower_score += 25;
+			sc.total_score += 25;
+		}
+		else
+			sc.full_house = 0;
 		break;
 	case 10: // Small Straight
+		if(((scoring_info>>21) & 1) || isJoker(scoring_info, section)) {
+			sc.small_straight = 30;
+			sc.lower_score += 30;
+			sc.total_score += 30;
+		}
+		else
+			sc.small_straight = 0;
 		break;
 	case 11: // Large Straight
+		if(((scoring_info>>22) & 1) || isJoker(scoring_info, section)) {
+			sc.large_straight = 40;
+			sc.lower_score += 40;
+			sc.total_score += 40;
+		}
+		else
+			sc.large_straight = 0;
 		break;
 	case 12: // Yahtzee
+		if((scoring_info>>23) & 1) {
+			sc.yahtzee = 50;
+			sc.lower_score += 50;
+			sc.total_score += 50;
+			st.y_bonus_state = true;
+		} else
+			sc.yahtzee = 0;
+
 		break;
 	case 13: // Chance
+		score = scoring_info>>24; // Sum of dice
+		sc.chance = score;
+		sc.lower_score += score;
+		sc.total_score += score;
 		break;
 	}
-	// Add to scores (upper, total, upper_bonus, yahtzee bonus)
+	// Add upper section bonus
+	if(st.up_total >= 63 && sc.upper_bonus == 0) {
+		sc.upper_bonus = 35;
+		sc.total_score += 35;
+	}
+	// Add yahtzee joker bonuses
+	if(st.y_bonus_state && isJoker(scoring_info, section)) {
+		sc.yahtzee_bonus += 100;
+		sc.total_score += 100;
+	}
 
 	// Handle current state stuff
 	// Since we start a new turn, move the roll number to the beginning of
@@ -370,7 +481,10 @@ int Yahtzee::takeSection(int section) {
 	// number where x % 3 = 1.
 	st.roll_num = (st.roll_num + 3) - ((st.roll_num-1) % 3);
 	st.is_new_turn = true;
-	setStateId();
+	updateStateId();
+
+	std::bitset<64> b(curr_state_id);
+	std::cout << "Current State ID = " << b << std::endl;
 	return 0;
 }
 
@@ -380,17 +494,25 @@ scorecard Yahtzee::getScorecard() {
 
 
 int main() {
-	//std::cout << "Welcome to the yahtzee program!" << std::endl; // prints Hello World!!!
-	std::vector<int> d(5, 1);
+	int dies[5] = {1,1,1,1,1};
+	std::vector<int> d(dies, dies + sizeof(dies) / sizeof(int));
 	state test;
 	test.sc_status = 8190; // Only taken yahtzee
-	test.roll_num = 62; // Entering first roll of second turn
+	test.roll_num = 39; // Entering first roll of second turn
 	test.dice = d;
-	test.up_bonus = 62;
-	test.y_bonus = 1; // Yahtzee bonus is available
+	test.up_total = 57;
+	test.y_bonus_state = false; // Yahtzee bonus is available
 	test.is_new_turn = false;
 
 	Yahtzee y(test);
+	y.takeSection(1);
+	std::cout << y.getScorecard().total_score << std::endl;
+	/*for(int i = 1; i <= 13; i++) {
+		if(y.isSectionTaken(i))
+			std::cout << "Section " << i << " is taken!\n";
+		else
+			std::cout << "Section " << i << " is not taken!\n";
+	}*/
 	/*std::string temp;
 	int selected_dice = 0;
 	for(int i = 0; i < 10; i++) {
@@ -401,9 +523,9 @@ int main() {
 			selected_dice = y.selectDice(temp);
 		} while(selected_dice == -1);
 		std::cout << "Kept Id #: " << selected_dice << std::endl;
-	}*/
-	int x[10] = {6, 5, 0, 0, 0, 0, 0, 0, 0, 0}; // one 1, one 5, three 6s
-	std::cout << "Scoring Map Value = " << y.setScoringMapValue(x) << std::endl;
+	}
+	int x[10] = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1}; // one 1, one 5, three 6s
+	std::cout << "Scoring Map Value = " << y.setScoringMapValue(x) << std::endl;*/
 
 	return 0;
 }
