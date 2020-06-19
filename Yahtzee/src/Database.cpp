@@ -1,3 +1,11 @@
+//================-============================================================
+// Name        : Database.cpp
+// Author      : Gabriel Simmons, Austin Sullivan
+// Version     : 0.1
+// Copyright   : Your copyright notice
+// Description : Handles SQLite database interactions
+//============================================================================
+
 #include "Database.h"
 
 #include <iostream>

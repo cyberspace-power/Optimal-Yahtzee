@@ -17,37 +17,13 @@
 typedef struct state {
 	std::vector<int> dice;
 	bool is_new_turn; // Aids getDiceStateId --> if true: return dice state 0 = no roll yet
+
 	// Rest of variables make up state ID number
 	unsigned char up_total;
 	bool y_bonus_state;
 	unsigned short sc_status; //scorecard status --> what sections remain
 	char roll_num;
 } state;
-
-// scorecard struct really only meant for if you play a full game. Computer will have no need of it
-typedef struct scorecard {
-	// Sections
-	int ones = -1;
-	int twos = -1;
-	int threes = -1;
-	int fours = -1;
-	int fives = -1;
-	int sixes = -1;
-	int three_of_kind = -1;
-	int four_of_kind = -1;
-	int full_house = -1;
-	int small_straight = -1;
-	int large_straight = -1;
-	int yahtzee = -1;
-	int chance = -1;
-	// Total Scores
-	int upper_score = 0;
-	int lower_score = 0;
-	int total_score = 0;
-	// Bonuses
-	int upper_bonus = 0;
-	int yahtzee_bonus = 0;
-} scorecard;
 
 class Yahtzee {
   public:
@@ -80,19 +56,12 @@ class Yahtzee {
 	bool isJoker(int scoring_info, int section); // Helper for takeSection()
 	bool isSectionTaken(int section); // Helper for takeSection()
 	int takeSection(int section);
-	scorecard getScorecard();
-
-	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
-	long curr_state_id;
 
   private:
-	//long curr_state_id;
+	long curr_state_id;
 	state st;
-	scorecard sc;
 	std::unordered_map<int, int> dice_state_map; // maps dice state to 8 bit dice state id
-	//std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
+	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
 };
-
-
 
 #endif /* YAHTZEE_H_ */

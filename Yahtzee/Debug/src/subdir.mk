@@ -4,13 +4,22 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../src/Yahtzee.cpp 
+../src/Database.cpp \
+../src/Yahtzee.cpp \
+../src/YahtzeeGame.cpp \
+../src/test.cpp 
 
 OBJS += \
-./src/Yahtzee.o 
+./src/Database.o \
+./src/Yahtzee.o \
+./src/YahtzeeGame.o \
+./src/test.o 
 
 CPP_DEPS += \
-./src/Yahtzee.d 
+./src/Database.d \
+./src/Yahtzee.d \
+./src/YahtzeeGame.d \
+./src/test.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

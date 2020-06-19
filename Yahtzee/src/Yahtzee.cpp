@@ -13,6 +13,7 @@
 #include <ctime> // time() used to seed RNG
 #include <string>
 #include <unordered_map>
+//#include <sqlite3.h>
 #include "Yahtzee.h"
 
 // Begins a game from specified state
@@ -139,11 +140,6 @@ unsigned char Yahtzee::getDiceStateId() {
 		}
 	}
 	int key = getDiceKey(dice_multisets);
-	// For testing purposes
-	/*for(int i = 0; i < 5; i++)
-		std::cout << dice_multisets[i*2] << ": " << dice_multisets[i*2 + 1] << std::endl;
-
-	std::cout << key << "\n";*/
 	return dice_state_map.at(key);
 }
 
@@ -358,6 +354,8 @@ bool Yahtzee::isJoker(int scoring_info, int section) {
 }
 
 bool Yahtzee::isSectionTaken(int section) {
+	/*std::bitset<16> b(curr_state_id>>21);
+	std::cout << "Scorecard State = " << b << std::endl;*/
 	return ((curr_state_id>>(21 + (section-1))) & 1);
 }
 
@@ -380,99 +378,75 @@ int Yahtzee::takeSection(int section) {
 	else
 		st.sc_status |= 1<<(section-1);
 	int scoring_info = dice_scoring_map[curr_state_id & 0xff]; // First get scoring info mapped by dice state ID
+	bool is_bonus_achieved = (setUpperBonusStateId() == 63) ? true : false;
 	int score = 0;
 	if(section <= 6) { // If upper section (Minimizes code in cases 1-6 of switch statement)
 		score = section * ((scoring_info >> ((section-1) * 3)) & 0x7);
-		sc.upper_score += score;
+		//sc.upper_score += score;
 		st.up_total += score; // Increase state's upper total (may be different than scorecard's if game was started from middle state
-		sc.total_score += score;
+		//sc.total_score += score;
 	}
 
 	switch(section)
 	{
-	case 1: // Ones
-		sc.ones = score;
+	  case 1: // Ones
 		break;
-	case 2: // Twos
-		sc.twos = score;
+	  case 2: // Twos
 		break;
-	case 3: // Threes
-		sc.threes = score;
+	  case 3: // Threes
 		break;
-	case 4: // Fours
-		sc.fours = score;
+	  case 4: // Fours
 		break;
-	case 5: // Fives
-		sc.fives = score;
+	  case 5: // Fives
 		break;
-	case 6: // Sixes
-		sc.sixes = score;
+	  case 6: // Sixes
 		break;
-	case 7: // Three of a Kind
+	  case 7: // Three of a Kind
 		score = ((scoring_info>>18) & 1) ? (scoring_info>>24) : 0;
-		sc.three_of_kind = score;
-		sc.lower_score += score;
-		sc.total_score += score;
 		break;
-	case 8: // Four of a Kind
+	  case 8: // Four of a Kind
 		score = ((scoring_info>>19) & 1) ? (scoring_info>>24) : 0;
-		sc.four_of_kind = score;
-		sc.lower_score += score;
-		sc.total_score += score;
 		break;
-	case 9: // Full House
+	  case 9: // Full House
 		if(((scoring_info>>20) & 1) || isJoker(scoring_info, section)) {
-			sc.full_house = 25;
-			sc.lower_score += 25;
-			sc.total_score += 25;
+			score = 25;
 		}
 		else
-			sc.full_house = 0;
+			score = 0;
 		break;
-	case 10: // Small Straight
+	  case 10: // Small Straight
 		if(((scoring_info>>21) & 1) || isJoker(scoring_info, section)) {
-			sc.small_straight = 30;
-			sc.lower_score += 30;
-			sc.total_score += 30;
+			score = 30;
 		}
 		else
-			sc.small_straight = 0;
+			score = 0;
 		break;
-	case 11: // Large Straight
+	  case 11: // Large Straight
 		if(((scoring_info>>22) & 1) || isJoker(scoring_info, section)) {
-			sc.large_straight = 40;
-			sc.lower_score += 40;
-			sc.total_score += 40;
+			score = 40;
 		}
 		else
-			sc.large_straight = 0;
+			score = 0;
 		break;
-	case 12: // Yahtzee
+	  case 12: // Yahtzee
 		if((scoring_info>>23) & 1) {
-			sc.yahtzee = 50;
-			sc.lower_score += 50;
-			sc.total_score += 50;
+			score = 50;
 			st.y_bonus_state = true;
-		} else
-			sc.yahtzee = 0;
-
+		}
+		else
+			score = 0;
 		break;
-	case 13: // Chance
+	  case 13: // Chance
 		score = scoring_info>>24; // Sum of dice
-		sc.chance = score;
-		sc.lower_score += score;
-		sc.total_score += score;
 		break;
 	}
 	// Add upper section bonus
-	if(st.up_total >= 63 && sc.upper_bonus == 0) {
-		sc.upper_bonus = 35;
-		sc.total_score += 35;
+	if(st.up_total >= 63 && !is_bonus_achieved) { //&& sc.upper_bonus == 0) {
+		score += 35;
 	}
 	// Add yahtzee joker bonuses
 	if(st.y_bonus_state && isJoker(scoring_info, section)) {
-		sc.yahtzee_bonus += 100;
-		sc.total_score += 100;
+		score += 100;
 	}
 
 	// Handle current state stuff
@@ -483,17 +457,11 @@ int Yahtzee::takeSection(int section) {
 	st.is_new_turn = true;
 	updateStateId();
 
-	std::bitset<64> b(curr_state_id);
-	std::cout << "Current State ID = " << b << std::endl;
-	return 0;
-}
-
-scorecard Yahtzee::getScorecard() {
-	return sc;
+	return score;
 }
 
 
-int main() {
+/*int main() {
 	int dies[5] = {1,1,1,1,1};
 	std::vector<int> d(dies, dies + sizeof(dies) / sizeof(int));
 	state test;
@@ -505,8 +473,8 @@ int main() {
 	test.is_new_turn = false;
 
 	Yahtzee y(test);
-	y.takeSection(1);
-	std::cout << y.getScorecard().total_score << std::endl;
+	y.takeSection(1);*/
+	//std::cout << y.getScorecard().total_score << std::endl;
 	/*for(int i = 1; i <= 13; i++) {
 		if(y.isSectionTaken(i))
 			std::cout << "Section " << i << " is taken!\n";
@@ -527,5 +495,5 @@ int main() {
 	int x[10] = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1}; // one 1, one 5, three 6s
 	std::cout << "Scoring Map Value = " << y.setScoringMapValue(x) << std::endl;*/
 
-	return 0;
-}
+	//return 0;
+//}

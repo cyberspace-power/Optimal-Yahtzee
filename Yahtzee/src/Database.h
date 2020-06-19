@@ -1,3 +1,11 @@
+//================-============================================================
+// Name        : Database.h
+// Author      : Gabriel Simmons, Austin Sullivan
+// Version     : 0.1
+// Copyright   : Your copyright notice
+// Description : Header file for Database.h
+//============================================================================
+
 #ifndef DATABASE_H
 #define DATABASE_H
 
@@ -6,7 +14,7 @@
 #include <sqlite3.h> 
 
 typedef struct diceConfig {
-    int dice_id;  // this should be an unsigned short, but getDiceKey() currently returns an int
+    unsigned short dice_id;  // this should be an unsigned short, but getDiceKey() currently returns an int
     unsigned short sum = 0;
     bool is_yahtzee = false;
     bool is_long_straight = false;
