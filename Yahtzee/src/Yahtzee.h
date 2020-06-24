@@ -32,13 +32,11 @@ class Yahtzee {
 	Yahtzee();
 
 	// Dice Id functions:
-	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
-	int getDiceKey(int (&dice_multisets)[10]); // Helper for getDiceStateId()
 	unsigned char getDiceStateId();
+	static int getDiceKey(int (&dice_multisets)[10]); // Helper for getDiceStateId()
 
 	// State Id Functions:
 	void updateStateId();
-	unsigned char setUpperBonusStateId();
 	long getStateId();
 
 	// Roll Functions:
@@ -46,22 +44,30 @@ class Yahtzee {
 	int selectDice(std::string& input);
 
 	// Scoring Funtions:
-	int setScoringMapValue(int (&curr_combo)[10]);
-	bool is3OfKind(int (&curr_combo)[10]);
-	bool is4OfKind(int (&curr_combo)[10]);
-	bool isFullHouse(int (&curr_combo)[10]);
-	bool isSmallStraight(int (&curr_combo)[10]);
-	bool isLargeStraight(int (&curr_combo)[10]);
-	bool isYahtzee(int (&curr_combo)[10]);
-	bool isJoker(int scoring_info, int section); // Helper for takeSection()
-	bool isSectionTaken(int section); // Helper for takeSection()
 	int takeSection(int section);
+	static int setScoringMapValue(int (&curr_combo)[10]);
 
   private:
 	long curr_state_id;
 	state st;
 	std::unordered_map<int, int> dice_state_map; // maps dice state to 8 bit dice state id
 	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
+
+	// Dice Id functions:
+	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+
+	// State Id Functions:
+	unsigned char setUpperBonusStateId();
+
+	// Scoring Funtions:
+	static bool is3OfKind(int (&curr_combo)[10]);
+	static bool is4OfKind(int (&curr_combo)[10]);
+	static bool isFullHouse(int (&curr_combo)[10]);
+	static bool isSmallStraight(int (&curr_combo)[10]);
+	static bool isLargeStraight(int (&curr_combo)[10]);
+	static bool isYahtzee(int (&curr_combo)[10]);
+	bool isJoker(int scoring_info, int section); // Helper for takeSection()
+	bool isSectionTaken(int section); // Helper for takeSection()
 };
 
 #endif /* YAHTZEE_H_ */

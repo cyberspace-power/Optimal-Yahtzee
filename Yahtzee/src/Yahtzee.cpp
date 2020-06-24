@@ -462,38 +462,5 @@ int Yahtzee::takeSection(int section) {
 
 
 /*int main() {
-	int dies[5] = {1,1,1,1,1};
-	std::vector<int> d(dies, dies + sizeof(dies) / sizeof(int));
-	state test;
-	test.sc_status = 8190; // Only taken yahtzee
-	test.roll_num = 39; // Entering first roll of second turn
-	test.dice = d;
-	test.up_total = 57;
-	test.y_bonus_state = false; // Yahtzee bonus is available
-	test.is_new_turn = false;
-
-	Yahtzee y(test);
-	y.takeSection(1);*/
-	//std::cout << y.getScorecard().total_score << std::endl;
-	/*for(int i = 1; i <= 13; i++) {
-		if(y.isSectionTaken(i))
-			std::cout << "Section " << i << " is taken!\n";
-		else
-			std::cout << "Section " << i << " is not taken!\n";
-	}*/
-	/*std::string temp;
-	int selected_dice = 0;
-	for(int i = 0; i < 10; i++) {
-		y.roll(selected_dice);
-		do {
-			std::cout << "\nSelect which dice to keep: ";
-			std::getline(std::cin, temp);
-			selected_dice = y.selectDice(temp);
-		} while(selected_dice == -1);
-		std::cout << "Kept Id #: " << selected_dice << std::endl;
-	}
-	int x[10] = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1}; // one 1, one 5, three 6s
-	std::cout << "Scoring Map Value = " << y.setScoringMapValue(x) << std::endl;*/
-
-	//return 0;
-//}
+	// Testing only
+}*/

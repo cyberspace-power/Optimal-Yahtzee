@@ -14,6 +14,7 @@
 #include <sqlite3.h> 
 
 typedef struct diceConfig {
+	// TODO: Add dice key for lookups
     unsigned short dice_id;  // this should be an unsigned short, but getDiceKey() currently returns an int
     unsigned short sum = 0;
     bool is_yahtzee = false;
@@ -47,6 +48,7 @@ class Database {
 
     int insertDiceConfig(diceConfig* data, bool forceCommit);
     int insertDiceProbability(diceProbability* data, bool forceCommit);
+    // TODO: need dice ID, and kept dice ID tables
 
     void selectDiceConfig(diceConfig* data);
     void selectDiceProbability(diceProbability* data);
@@ -60,7 +62,7 @@ class Database {
 
     sqlite3 *db;
 
-    int insertLimit = 10000;  // for INSERT optimization (if using sqlite version < 3.8.8, set to 500)
+    const unsigned int insertLimit = 10000;  // for INSERT optimization (if using sqlite version < 3.8.8, set to 500)
 
     std::ostringstream insertDiceConfigBuffer;
     unsigned int insertDiceConfigBufferCount;
