@@ -46,6 +46,7 @@ Database::Database(std::string& filename) {
     exec(sql);
 
     sql = "CREATE TABLE DiceConfig (" \
+    	"dice_key INTEGER NOT NULL UNIQUE," \
         "dice_id INTEGER NOT NULL UNIQUE," \
         "sum INTEGER," \
         "is_yahtzee INTEGER," \
@@ -60,7 +61,7 @@ Database::Database(std::string& filename) {
         "num_4s INTEGER," \
         "num_5s INTEGER," \
         "num_6s INTEGER," \
-        "PRIMARY KEY(dice_id)" \
+        "PRIMARY KEY(dice_key)" \
         ");";
     exec(sql);
 }
@@ -101,6 +102,7 @@ int Database::insertDiceConfig(diceConfig* data, bool forceCommit) {
     }
 
     insertDiceConfigBuffer << "(";
+    insertDiceConfigBuffer << data->dice_key << ", ";
     insertDiceConfigBuffer << data->dice_id << ", ";
     insertDiceConfigBuffer << data->sum << ", ";
     insertDiceConfigBuffer << data->is_yahtzee << ", ";
@@ -162,7 +164,7 @@ void Database::selectDiceConfig(diceConfig* data) {
     }
 
     sql << "SELECT * FROM DiceConfig\n";
-    sql << "WHERE dice_id=" << data->dice_id << ";";
+    sql << "WHERE dice_key=" << data->dice_key << ";";
 
     rc = sqlite3_exec(db, sql.str().c_str(), selectDiceConfigCallback, (void*)data, &zErrMsg);
     if( rc != SQLITE_OK ){
@@ -239,20 +241,21 @@ int Database::selectDiceConfigCallback(void *void_data, int argc, char **argv, c
         return -1;
     }
 
-    data->dice_id = atoi(argv[0]);
-    data->sum = atoi(argv[1]);
-    data->is_yahtzee = atoi(argv[2]);
-    data->is_long_straight = atoi(argv[3]);
-    data->is_short_straight = atoi(argv[4]);
-    data->is_full_house = atoi(argv[5]);
-    data->is_3_of_a_kind = atoi(argv[6]);
-    data->is_4_of_a_kind = atoi(argv[7]);
-    data->num_1s = atoi(argv[8]);
-    data->num_2s = atoi(argv[9]);
-    data->num_3s = atoi(argv[10]);
-    data->num_4s = atoi(argv[11]);
-    data->num_5s = atoi(argv[12]);
-    data->num_6s = atoi(argv[13]);
+    data->dice_key = atoi(argv[0])
+    data->dice_id = atoi(argv[1]);
+    data->sum = atoi(argv[2]);
+    data->is_yahtzee = atoi(argv[3]);
+    data->is_long_straight = atoi(argv[4]);
+    data->is_short_straight = atoi(argv[5]);
+    data->is_full_house = atoi(argv[6]);
+    data->is_3_of_a_kind = atoi(argv[7]);
+    data->is_4_of_a_kind = atoi(argv[8]);
+    data->num_1s = atoi(argv[9]);
+    data->num_2s = atoi(argv[10]);
+    data->num_3s = atoi(argv[11]);
+    data->num_4s = atoi(argv[12]);
+    data->num_5s = atoi(argv[13]);
+    data->num_6s = atoi(argv[14]);
 
     return 0;
 }

@@ -40,12 +40,7 @@ typedef struct scorecard {
 typedef struct player {
 	scorecard sc;
 	Yahtzee y;
-	int turn;
-
-	player() {
-		y = Yahtzee();
-		turn = 1;
-	}
+	int turn = 1;
 } player;
 
 class YahtzeeGame {

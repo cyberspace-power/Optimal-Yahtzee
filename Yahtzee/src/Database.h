@@ -14,7 +14,7 @@
 #include <sqlite3.h> 
 
 typedef struct diceConfig {
-	// TODO: Add dice key for lookups
+	unsigned int dice_key;
     unsigned short dice_id;  // this should be an unsigned short, but getDiceKey() currently returns an int
     unsigned short sum = 0;
     bool is_yahtzee = false;

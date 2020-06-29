@@ -15,8 +15,8 @@
 
 
 YahtzeeGame::YahtzeeGame(int players) {
+	player temp;
 	for(int i = 0; i < players; i++) {
-		player temp;
 		p.push_back(temp);
 	}
 }
