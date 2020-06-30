@@ -106,8 +106,8 @@ int Database::insertDiceConfig(diceConfig* data, bool forceCommit) {
     insertDiceConfigBuffer << data->dice_id << ", ";
     insertDiceConfigBuffer << data->sum << ", ";
     insertDiceConfigBuffer << data->is_yahtzee << ", ";
-    insertDiceConfigBuffer << data->is_long_straight << ", ";
-    insertDiceConfigBuffer << data->is_short_straight << ", ";
+    insertDiceConfigBuffer << data->is_large_straight << ", ";
+    insertDiceConfigBuffer << data->is_small_straight << ", ";
     insertDiceConfigBuffer << data->is_full_house << ", ";
     insertDiceConfigBuffer << data->is_3_of_a_kind << ", ";
     insertDiceConfigBuffer << data->is_4_of_a_kind << ", ";
@@ -241,12 +241,12 @@ int Database::selectDiceConfigCallback(void *void_data, int argc, char **argv, c
         return -1;
     }
 
-    data->dice_key = atoi(argv[0])
+    data->dice_key = atoi(argv[0]);
     data->dice_id = atoi(argv[1]);
     data->sum = atoi(argv[2]);
     data->is_yahtzee = atoi(argv[3]);
-    data->is_long_straight = atoi(argv[4]);
-    data->is_short_straight = atoi(argv[5]);
+    data->is_large_straight = atoi(argv[4]);
+    data->is_small_straight = atoi(argv[5]);
     data->is_full_house = atoi(argv[6]);
     data->is_3_of_a_kind = atoi(argv[7]);
     data->is_4_of_a_kind = atoi(argv[8]);

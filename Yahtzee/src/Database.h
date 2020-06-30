@@ -18,8 +18,8 @@ typedef struct diceConfig {
     unsigned short dice_id;  // this should be an unsigned short, but getDiceKey() currently returns an int
     unsigned short sum = 0;
     bool is_yahtzee = false;
-    bool is_long_straight = false;
-    bool is_short_straight = false;
+    bool is_large_straight = false;
+    bool is_small_straight = false;
     bool is_full_house = false;
     bool is_3_of_a_kind = false;
     bool is_4_of_a_kind = false;
@@ -48,7 +48,7 @@ class Database {
 
     int insertDiceConfig(diceConfig* data, bool forceCommit);
     int insertDiceProbability(diceProbability* data, bool forceCommit);
-    // TODO: need dice ID, and kept dice ID tables
+    // TODO: need kept dice ID tables
 
     void selectDiceConfig(diceConfig* data);
     void selectDiceProbability(diceProbability* data);

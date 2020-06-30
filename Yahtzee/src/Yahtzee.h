@@ -52,9 +52,11 @@ class Yahtzee {
 	state st;
 	std::unordered_map<int, int> dice_state_map; // maps dice state to 8 bit dice state id
 	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
+	std::unordered_map<int, int> kept_dice_map; // Keeps track of ID numbers for kept dice states
 
 	// Dice Id functions:
 	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+	void setKeptDiceMap(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
 
 	// State Id Functions:
 	unsigned char setUpperBonusStateId();

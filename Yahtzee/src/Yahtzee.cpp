@@ -47,8 +47,10 @@ Yahtzee::Yahtzee() {
 	dice_state_map.reserve(252);
 	dice_scoring_map.reserve(252);
 	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
-	int combo_count = 0;
+	int combo_count = 1;
 	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
+	combo_count = 0;
+	setKeptDiceMap(0, 0, 1, 0, curr_combo, combo_count);
 	curr_state_id = 1 << 8; // Initial state at beginning of new game
 	std::vector<int> d(5,1);
 	st.dice = d;
@@ -58,6 +60,39 @@ Yahtzee::Yahtzee() {
 	st.y_bonus_state = 0;
 	st.is_new_turn = true;
 	srand(time(0)); // Set seed for RNG
+}
+
+void Yahtzee::setKeptDiceMap(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
+	if(num_of_dice == 0) {
+		kept_dice_map[0] = combo_count;
+		combo_count++;
+	}
+	for(int i = min; i <= 6; i++) {
+			curr_combo[curr_index] = i;
+			for(int j = freq_left; j > 0; j--) {
+				curr_combo[curr_index + 1] = j;
+				if(j == freq_left) { // No more dice can be added to combo. Map it!
+					if(kept_dice_map.find(getDiceKey(curr_combo)) != kept_dice_map.end())
+						std::cout << "Error -- Element already exists\n";
+					kept_dice_map[getDiceKey(curr_combo)] = combo_count;
+					combo_count++;
+				}
+				else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
+					break;
+				else // recurse to next highest number and place in combo array
+					setKeptDiceMap(num_of_dice, freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
+			}
+		}
+		// About to return to previous recursion. Reset array values to 0
+		curr_combo[curr_index] = 0;
+		curr_combo[curr_index + 1] = 0;
+
+		// Initial recursion finished --> increment # of dice if < 4
+		// You cannot keep more than 4 dice, therefore stop after 4:
+		if(freq_left == num_of_dice && num_of_dice < 4) {
+			setKeptDiceMap(num_of_dice+1, freq_left+1, 1, 0, curr_combo, combo_count);
+		}
+		return;
 }
 
 /*
@@ -461,6 +496,6 @@ int Yahtzee::takeSection(int section) {
 }
 
 
-/*int main() {
-	// Testing only
-}*/
+int main() {
+	Yahtzee y;
+}

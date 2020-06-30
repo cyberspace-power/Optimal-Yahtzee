@@ -16,11 +16,20 @@ class YahtzeeTableSet {
   public:
 	YahtzeeTableSet(std::string filename); // Constructor
 
-	void initializeDiceConfigTable(); // Wrapper for setDiceTables
+	static void initializeDiceConfigTable(); // Wrapper for setDiceTables
+	static void initializeKeptDiceTables(bool initialize_prob_table); // Wrapper for setKeptDiceTable
   private:
-	void setDiceTables(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+	// Misc
+	int getDiceKey(const int curr_combo[10]);
 
-	Database d;
+	// Table setters
+	void setDiceConfigTables(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+	void setKeptDiceTables(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10],
+			int &combo_count, bool initialize_prob_table);
+	void setDiceProbTable(int freq_left, int min, int curr_index, int (&roll_curr_combo)[10],
+			const int kept_curr_combo[10]);
+
+	Database db;
 };
 
 
