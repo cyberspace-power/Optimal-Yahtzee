@@ -496,6 +496,6 @@ int Yahtzee::takeSection(int section) {
 }
 
 
-int main() {
+/*int main() {
 	Yahtzee y;
-}
+}*/
