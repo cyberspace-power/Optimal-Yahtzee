@@ -72,4 +72,4 @@ class Yahtzee {
 	bool isSectionTaken(int section); // Helper for takeSection()
 };
 
-#endif /* YAHTZEE_H_ */
+#endif /* YAHTZEE_H */

@@ -6,15 +6,14 @@
 // Description : Header file for YahtzeeTableSet.h
 //============================================================================
 
-#ifndef YAHTZEETABLESET_H_
-#define YAHTZEETABLESET_H_
+#ifndef YAHTZEETABLESET_H
+#define YAHTZEETABLESET_H
 
 #include <string>
-#include "Database.h"
 
 class YahtzeeTableSet {
   public:
-	YahtzeeTableSet(std::string filename); // Constructor
+	YahtzeeTableSet(sqlite3 *db); // Constructor
 
 	void initializeDiceConfigTable(); // Wrapper for setDiceTables
 	void initializeKeptDiceTables(bool initialize_prob_table); // Wrapper for setKeptDiceTable
@@ -35,4 +34,4 @@ class YahtzeeTableSet {
 };
 
 
-#endif /* YAHTZEETABLESET_H_ */
+#endif /* YAHTZEETABLESET_H */

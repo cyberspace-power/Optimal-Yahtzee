@@ -14,7 +14,7 @@
 #include <sqlite3.h> 
 
 typedef struct diceConfig {
-	unsigned int dice_key;
+    unsigned int dice_key;
     unsigned short dice_id;  // this should be an unsigned short, but getDiceKey() currently returns an int
     unsigned short sum = 0;
     bool is_yahtzee = false;
@@ -38,6 +38,13 @@ typedef struct diceProbability {
         unsigned int prob_den;
 } diceProbability;
 
+typedef struct output {
+        int state;
+        int optimal_play;
+        unsigned int prob_num;  // probabilities stored as fractions to retain information
+        unsigned int prob_den;
+} output;
+
 class Database {
   public:
     Database(std::string& filename);
@@ -46,29 +53,61 @@ class Database {
 
     int exec(const std::string& str);
 
+    // create the table
+    void createTableDiceConfig();
+    void createTableDiceProbability();
+    void createTableOutput();
+
+    // fill in the whole table
+    void initializeTableDiceConfig();
+    void initializeTableDiceProbability();
+    void initializeTableOutput();  // TODO here's the fun(nest) part
+
+    // add a row to the table
     int insertDiceConfig(diceConfig* data, bool forceCommit);
     int insertDiceProbability(diceProbability* data, bool forceCommit);
-    // TODO: need kept dice ID tables
+    int insertOutput(output* data, bool forceCommit);
 
+    // get a row from the table
     void selectDiceConfig(diceConfig* data);
     void selectDiceProbability(diceProbability* data);
+    void selectOutput(output* data);
 
   private:
+    // Table setters
+    void setDiceConfigTables(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+    void setDiceProbTable(int num_of_dice, int freq_left, int min, int curr_index, int combo_count, int (&roll_curr_combo)[10],
+        const int (&kept_curr_combo)[10]);
+    // TODO setOutputTable()
+
+    // Helpers for setDiceProbTable:
+    int getNumerator(int num_of_dice, const int (&roll_curr_combo)[10]);
+    static int factorial(int x);
+    int combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&kept_curr_combo)[10]);
+
+    // manages bulk insert
     int commitDiceConfigInsert();
     int commitDiceProbabilityInsert();
+    int commitOutputInsert();
 
+    // helper required for select<Tablename>() methods
     static int selectDiceConfigCallback(void *void_data, int argc, char **argv, char **azColName);
     static int selectDiceProbabilityCallback(void *void_data, int argc, char **argv, char **azColName);
+    static int selectOutputCallback(void *void_data, int argc, char **argv, char **azColName);
 
     sqlite3 *db;
 
     const unsigned int insertLimit = 10000;  // for INSERT optimization (if using sqlite version < 3.8.8, set to 500)
 
+    // buffer used for bulk insert
     std::ostringstream insertDiceConfigBuffer;
-    unsigned int insertDiceConfigBufferCount;
-    
     std::ostringstream insertDiceProbabilityBuffer;
+    std::ostringstream insertOutputBuffer;
+
+    // number of outstanding items to be inserted not yet committed to the database
+    unsigned int insertDiceConfigBufferCount;
     unsigned int insertDiceProbabilityBufferCount;
+    unsigned int insertOutputBufferCount;
 };
 
 #endif /* DATABASE_H */
