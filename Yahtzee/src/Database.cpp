@@ -7,12 +7,26 @@
 //============================================================================
 
 #include "Database.h"
-#include "Yahtzee.h"
 
 #include <iostream>
 #include <sstream>
 
+Database::Database() {}
+
 Database::Database(std::string& filename) {
+    setFilename(filename);
+}
+
+Database::~Database() {
+    sqlite3_close(db);
+}
+
+Database::Database(const Database&) {
+    // ostringstreams aren't movable so it deletes the copy constructor
+    // but we don't need the copy constructor so I'm just leaving this blank lol
+}
+
+void Database::setFilename(std::string& filename) {
     char *zErrMsg = 0;
     int rc;
     std::string sql;
@@ -25,19 +39,12 @@ Database::Database(std::string& filename) {
         std::cout << "Opened database successfully" << std::endl;
     }
 
+    opened = true;
+
     // Create necessary tables
     createTableDiceConfig();
     createTableDiceProbability();
     createTableOutput();
-}
-
-Database::~Database() {
-    sqlite3_close(db);
-}
-
-Database::Database(const Database&) {
-    // ostringstreams aren't movable so it deletes the copy constructor
-    // but we don't need the copy constructor so I'm just leaving this blank lol
 }
 
 // used to execute a basic query where the only info we need is whether is succeeded
@@ -103,13 +110,6 @@ void Database::createTableOutput() {
         "PRIMARY KEY(state)" \
         ");";
     exec(sql);
-}
-
-// A wrapper to initialize dice config table
-void Database::initializeTableDiceConfig() {
-    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
-    int combo_count = 1;
-    setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
 }
 
 // lazy insert into the DiceConfig table
@@ -260,51 +260,6 @@ void Database::selectOutput(output* data) {
         std::cout << "SQL error: " << zErrMsg << std::endl;
         sqlite3_free(zErrMsg);
     }
-}
-
-/*
- * Purpose: Set the dice configuration table to allow for constant time lookups
- * Style: Recursive function that iterates through all possible
- *    dice combinations and maps them to the number of mapped combos
- *    to that point (i.e. A number between 1-252)
- */
-void Database::setDiceConfigTables(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
-	for(int i = min; i <= 6; i++) {
-		curr_combo[curr_index] = i;
-		for(int j = freq_left; j > 0; j--) {
-			curr_combo[curr_index + 1] = j;
-			if(j == freq_left) { // No more dice can be added to combo. Map it!
-				diceConfig dc;
-				int scoring_data = Yahtzee::setScoringMapValue(curr_combo);
-				dc.dice_key = Yahtzee::getDiceKey(curr_combo);
-				dc.dice_id = combo_count;
-				dc.sum = scoring_data>>24;
-				dc.is_yahtzee = ((scoring_data>>23) & 1);
-				dc.is_large_straight = ((scoring_data>>22) & 1);
-				dc.is_small_straight = ((scoring_data>>21) & 1);
-				dc.is_full_house = ((scoring_data>>20) & 1);
-				dc.is_4_of_a_kind = ((scoring_data>>19) & 1);
-				dc.is_3_of_a_kind = ((scoring_data>>18) & 1);
-				dc.num_1s = scoring_data & 0x7;
-				dc.num_2s = ((scoring_data>>3) & 0x7);
-				dc.num_3s = ((scoring_data>>6) & 0x7);
-				dc.num_4s = ((scoring_data>>9) & 0x7);
-				dc.num_5s = ((scoring_data>>12) & 0x7);
-				dc.num_6s = ((scoring_data>>15) & 0x7);
-				insertDiceConfig(&dc, 0);
-
-				combo_count++; // Increment combo count
-			}
-			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
-				break;
-			else // recurse to next highest number and place in combo array
-				setDiceConfigTables(freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
-		}
-	}
-	// About to return to previous recursion. Reset array values to 0
-	curr_combo[curr_index] = 0;
-	curr_combo[curr_index + 1] = 0;
-	return;
 }
 
 int Database::commitDiceConfigInsert() {
