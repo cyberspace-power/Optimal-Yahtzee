@@ -1,4 +1,4 @@
-/*#include "Database.h"
+#include "Database.h"
 
 #include <string>
 #include <iostream>
@@ -22,4 +22,4 @@ int main() {
     std::cout << "DICE CONFIG: " << dc_data.dice_id << " - num 1s: " << dc_data.num_1s << std::endl;
 
     return 0;
-}*/
+}

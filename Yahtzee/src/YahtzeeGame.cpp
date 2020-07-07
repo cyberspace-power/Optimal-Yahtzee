@@ -8,11 +8,11 @@
 
 #include "Yahtzee.h"
 #include "YahtzeeGame.h"
+
 #include <vector>
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
-
 
 YahtzeeGame::YahtzeeGame(int players) {
 	player temp;

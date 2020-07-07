@@ -11,8 +11,22 @@
 #include <iostream>
 #include <sstream>
 
+Database::Database() {}
 
 Database::Database(std::string& filename) {
+    setFilename(filename);
+}
+
+Database::~Database() {
+    sqlite3_close(db);
+}
+
+Database::Database(const Database&) {
+    // ostringstreams aren't movable so it deletes the copy constructor
+    // but we don't need the copy constructor so I'm just leaving this blank lol
+}
+
+void Database::setFilename(std::string& filename) {
     char *zErrMsg = 0;
     int rc;
     std::string sql;
@@ -25,28 +39,36 @@ Database::Database(std::string& filename) {
         std::cout << "Opened database successfully" << std::endl;
     }
 
+    opened = true;
+
     // Create necessary tables
-    // TODO don't bother trying to create if they already exist
-    sql = "CREATE TABLE DiceProbability ("  \
-        "kept_dice INTEGER NOT NULL UNIQUE," \
-        "next_dice INTEGER," \
-        "prob_num INTEGER," \
-        "prob_den INTEGER," \
-        "PRIMARY KEY(kept_dice)" \
-        ");";
-    exec(sql);
+    createTableDiceConfig();
+    createTableDiceProbability();
+    createTableOutput();
+}
 
-    sql = "CREATE TABLE Output (" \
-        "state INTEGER NOT NULL UNIQUE," \
-        "optimal_play INTEGER," \
-        "ev_num INTEGER," \
-        "ev_den INTEGER," \
-        "PRIMARY KEY(state)" \
-        ");";
-    exec(sql);
+// used to execute a basic query where the only info we need is whether is succeeded
+int Database::exec(const std::string& str) {
+    char *zErrMsg = 0;
+    int rc;
 
-    sql = "CREATE TABLE DiceConfig (" \
-    	"dice_key INTEGER NOT NULL UNIQUE," \
+    std::cout << str << std::endl << std::endl;
+
+    rc = sqlite3_exec(db, str.c_str(), NULL, 0, &zErrMsg);
+    if( rc != SQLITE_OK ){
+        std::cout << "SQL error: " << zErrMsg << std::endl;
+        sqlite3_free(zErrMsg);
+        return -1;
+    } else {
+        // std::cout << "Completed operation successfully" << std::endl;
+        return 0;
+    }
+}
+
+void Database::createTableDiceConfig() {
+    std::string sql;
+    sql = "CREATE TABLE IF NOT EXISTS DiceConfig (" \
+        "dice_key INTEGER NOT NULL UNIQUE," \
         "dice_id INTEGER NOT NULL UNIQUE," \
         "sum INTEGER," \
         "is_yahtzee INTEGER," \
@@ -66,31 +88,28 @@ Database::Database(std::string& filename) {
     exec(sql);
 }
 
-Database::~Database() {
-    sqlite3_close(db);
+void Database::createTableDiceProbability() {
+    std::string sql;
+    sql = "CREATE TABLE IF NOT EXISTS DiceProbability ("  \
+        "kept_dice INTEGER NOT NULL UNIQUE," \
+        "next_dice INTEGER," \
+        "prob_num INTEGER," \
+        "prob_den INTEGER," \
+        "PRIMARY KEY(kept_dice)" \
+        ");";
+    exec(sql);
 }
 
-Database::Database(const Database&) {
-    // ostringstreams aren't movable so it deletes the copy constructor
-    // but we don't need the copy constructor so I'm just leaving this blank lol
-}
-
-// used to execute a basic query where the only info we need is whether is succeeded
-int Database::exec(const std::string& str) {
-    char *zErrMsg = 0;
-    int rc;
-
-    std::cout << str << std::endl << std::endl;
-
-    rc = sqlite3_exec(db, str.c_str(), NULL, 0, &zErrMsg);
-    if( rc != SQLITE_OK ){
-        std::cout << "SQL error: " << zErrMsg << std::endl;
-        sqlite3_free(zErrMsg);
-        return -1;
-    } else {
-        // std::cout << "Completed operation successfully" << std::endl;
-        return 0;
-    }
+void Database::createTableOutput() {
+    std::string sql;
+    sql = "CREATE TABLE IF NOT EXISTS Output (" \
+        "state INTEGER NOT NULL UNIQUE," \
+        "optimal_play INTEGER," \
+        "ev_num INTEGER," \
+        "ev_den INTEGER," \
+        "PRIMARY KEY(state)" \
+        ");";
+    exec(sql);
 }
 
 // lazy insert into the DiceConfig table
@@ -150,6 +169,29 @@ int Database::insertDiceProbability(diceProbability* data, bool forceCommit) {
     return 0;
 }
 
+// lazy insert into the Output table
+// forceCommit flag commits all outstanding inserts into this table
+int Database::insertOutput(output* data, bool forceCommit) {
+    if (insertOutputBuffer.str().length() == 0) {
+        insertOutputBuffer << "INSERT INTO Output\n";
+        insertOutputBuffer << "VALUES\n";
+    }
+
+    insertOutputBuffer << "(";
+    insertOutputBuffer << data->state << ", ";
+    insertOutputBuffer << data->optimal_play << ", ";
+    insertOutputBuffer << data->prob_num << ", ";
+    insertOutputBuffer << data->prob_den;
+
+    if (forceCommit || insertOutputBufferCount >= insertLimit){
+        return commitOutputInsert();
+    } else {
+        insertOutputBuffer << "),\n";
+        insertOutputBufferCount++;
+    }
+    return 0;
+}
+
 // fills in the data parameter with the contents of the corresponding row in the database
 // data.dice_id needs to be set before this method is called
 // sets the data.dice_id field to -1 on error
@@ -197,6 +239,29 @@ void Database::selectDiceProbability(diceProbability* data) {
     }
 }
 
+// fills in the data parameter with the contents of the corresponding row in the database
+// data.state needs to be set before this method is called
+// sets the data.kept_dice field to -1 on error
+void Database::selectOutput(output* data) {
+    char *zErrMsg = 0;
+    int rc;
+    std::ostringstream sql;
+
+    // commit any outstanding INSERTs before performing SELECT
+    if (insertOutputBufferCount > 0) {
+        commitOutputInsert();
+    }
+
+    sql << "SELECT * FROM Output\n";
+    sql << "WHERE state=" << data->state << ";"; 
+
+    rc = sqlite3_exec(db, sql.str().c_str(), selectOutputCallback, (void*)data, &zErrMsg);
+    if( rc != SQLITE_OK ){
+        std::cout << "SQL error: " << zErrMsg << std::endl;
+        sqlite3_free(zErrMsg);
+    }
+}
+
 int Database::commitDiceConfigInsert() {
     int ret;
 
@@ -229,6 +294,24 @@ int Database::commitDiceProbabilityInsert() {
     insertDiceProbabilityBuffer.str("");
     insertDiceProbabilityBuffer.clear();
     insertDiceProbabilityBufferCount = 0;
+
+    return ret;
+}
+
+int Database::commitOutputInsert() {
+    int ret;
+
+    insertOutputBuffer << ");";
+    ret = exec(insertOutputBuffer.str());
+
+    if (ret != 0) {
+        return ret;
+    }
+
+    // reset buffer
+    insertOutputBuffer.str("");
+    insertOutputBuffer.clear();
+    insertOutputBufferCount = 0;
 
     return ret;
 }
@@ -270,6 +353,22 @@ int Database::selectDiceProbabilityCallback(void *void_data, int argc, char **ar
 
     data->kept_dice = atoi(argv[0]);
     data->next_dice = atoi(argv[1]);
+    data->prob_num  = atoi(argv[2]);
+    data->prob_den  = atoi(argv[3]);
+
+    return 0;
+}
+
+int Database::selectOutputCallback(void *void_data, int argc, char **argv, char **azColName){
+    output* data = (output*)void_data;
+
+    if (argc != 4) {
+        data->state = -1;  // to indicate error
+        return -1;
+    }
+
+    data->state = atoi(argv[0]);
+    data->optimal_play = atoi(argv[1]);
     data->prob_num  = atoi(argv[2]);
     data->prob_den  = atoi(argv[3]);
 

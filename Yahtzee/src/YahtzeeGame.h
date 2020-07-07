@@ -6,10 +6,11 @@
 // Description : Header file for YahtzeeGame.h
 //============================================================================
 
-#ifndef YAHTZEEGAME_H_
-#define YAHTZEEGAME_H_
+#ifndef YAHTZEEGAME_H
+#define YAHTZEEGAME_H
 
 #include "Yahtzee.h"
+
 #include <vector>
 
 // scorecard struct really only meant for if you play a full game. Computer will have no need of it
@@ -60,4 +61,4 @@ class YahtzeeGame {
 	std::vector<player> p;
 };
 
-#endif /* YAHTZEEGAME_H_ */
+#endif /* YAHTZEEGAME_H */

@@ -14,6 +14,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "Database.h"
+
 typedef struct state {
 	std::vector<int> dice;
 	bool is_new_turn; // Aids getDiceStateId --> if true: return dice state 0 = no roll yet
@@ -47,12 +49,19 @@ class Yahtzee {
 	int takeSection(int section);
 	static int setScoringMapValue(int (&curr_combo)[10]);
 
+	// fill in the whole table
+	void initializeTableDiceConfig();
+	void initializeTableDiceProbability();
+	void initializeTableOutput();  // TODO here's the fun(nest) part
+
   private:
 	long curr_state_id;
 	state st;
 	std::unordered_map<int, int> dice_state_map; // maps dice state to 8 bit dice state id
 	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
 	std::unordered_map<int, int> kept_dice_map; // Keeps track of ID numbers for kept dice states
+
+	Database db;
 
 	// Dice Id functions:
 	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
@@ -70,6 +79,17 @@ class Yahtzee {
 	static bool isYahtzee(int (&curr_combo)[10]);
 	bool isJoker(int scoring_info, int section); // Helper for takeSection()
 	bool isSectionTaken(int section); // Helper for takeSection()
+
+	// Table setters
+	void setDiceConfigTables(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
+	void setDiceProbTable(int num_of_dice, int freq_left, int min, int curr_index, int combo_count, int (&roll_curr_combo)[10],
+		const int (&kept_curr_combo)[10]);
+	// TODO setOutputTable()
+
+	// Helpers for setDiceProbTable:
+	int getNumerator(int num_of_dice, const int (&roll_curr_combo)[10]);
+	static int factorial(int x);
+	int combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&kept_curr_combo)[10]);
 };
 
-#endif /* YAHTZEE_H_ */
+#endif /* YAHTZEE_H */
