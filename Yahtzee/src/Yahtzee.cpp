@@ -23,6 +23,8 @@ Yahtzee::Yahtzee(state start_state) {
 	// set up database
 	std::string filename = "test.db";
 	db.setFilename(filename);
+	initializeTableDiceConfig();
+	initializeTableDiceProbability();
 
 	st = start_state;
 	if(st.y_bonus_state && (((st.sc_status>>11) & 1) != 1)) {
@@ -48,6 +50,11 @@ Yahtzee::Yahtzee(state start_state) {
 
 // Begins a game from the beginning. Do not jump to specific state.
 Yahtzee::Yahtzee() {
+	// set up database
+	std::string filename = "test.db";
+	db.setFilename(filename);
+	initializeTableDiceConfig();
+	initializeTableDiceProbability();
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
@@ -57,6 +64,7 @@ Yahtzee::Yahtzee() {
 	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	combo_count = 0;
 	setKeptDiceMap(0, 0, 1, 0, curr_combo, combo_count);
+	//setDiceProbTable();
 	curr_state_id = 1 << 8; // Initial state at beginning of new game
 	std::vector<int> d(5,1);
 	st.dice = d;
@@ -78,10 +86,7 @@ void Yahtzee::setKeptDiceMap(int num_of_dice, int freq_left, int min, int curr_i
 			for(int j = freq_left; j > 0; j--) {
 				curr_combo[curr_index + 1] = j;
 				if(j == freq_left) { // No more dice can be added to combo. Map it!
-					if(kept_dice_map.find(getDiceKey(curr_combo)) != kept_dice_map.end())
-						std::cout << "Error -- Element already exists\n";
-					kept_dice_map[getDiceKey(curr_combo)] = combo_count;
-					combo_count++;
+
 				}
 				else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
 					break;
@@ -152,7 +157,7 @@ int Yahtzee::getDiceKey(int (&dice_multisets)[10]) {
 	// Since no number in either array will be greater than 6, the max of 10
 	// numbers will all fit in 3 bits. 3*10 = 30 bits < 32 bit integer.
 	int key = 0;
-	for(int i = 0; i < 5; i++)
+	for(int i = 0; i < 5 && dice_multisets[i*2] != 0; i++)
 		key |= (dice_multisets[i*2] << ((i*6) + 3)) | (dice_multisets[i*2 + 1] << (i*6));
 	return key;
 }
@@ -353,26 +358,6 @@ int Yahtzee::setScoringMapValue(int (&curr_combo)[10]) {
 	return score_data;
 }
 
-// A wrapper to initialize dice config table
-void Yahtzee::initializeTableDiceConfig() {
-    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
-    int combo_count = 1;
-    setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
-}
-
-// A wrapper to initialize dice probability table
-void Yahtzee::initializeTableDiceProbability() {
-    int combo_count = 1;
-	int partial_roll[10] = {0,0,0,0,0,0,0,0,0,0};
-    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
-    setDiceProbTable(5, 5, 1, 0, combo_count, partial_roll, curr_combo);
-}
-
-// A wrapper to initialize dice probability table
-void Yahtzee::initializeTableOutput() {
-	// TODO :)
-}
-
 /*
  * Purpose: Helper for takeSection(). Determines whether a section will count for
  * 		normal point due to the yahtzee joker rule. Also used to determine whether
@@ -521,6 +506,26 @@ int Yahtzee::takeSection(int section) {
 	return score;
 }
 
+// A wrapper to initialize dice config table
+void Yahtzee::initializeTableDiceConfig() {
+    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
+    int combo_count = 1;
+    setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
+}
+
+// A wrapper to initialize dice probability table
+void Yahtzee::initializeTableDiceProbability() {
+	//int partial_roll[10] = {0,0,0,0,0,0,0,0,0,0};
+    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
+    // Calls wrapper that specifies kept dice state before recursing through possible rolls
+    setKeptDice(0, 0, 1, 0, curr_combo);
+}
+
+// A wrapper to initialize dice probability table
+void Yahtzee::initializeTableOutput() {
+	// TODO :)
+}
+
 /*
  * Purpose: Set the dice configuration table to allow for constant time lookups
  * Style: Recursive function that iterates through all possible
@@ -534,8 +539,8 @@ void Yahtzee::setDiceConfigTables(int freq_left, int min, int curr_index, int (&
 			curr_combo[curr_index + 1] = j;
 			if(j == freq_left) { // No more dice can be added to combo. Map it!
 				diceConfig dc;
-				int scoring_data = Yahtzee::setScoringMapValue(curr_combo);
-				dc.dice_key = Yahtzee::getDiceKey(curr_combo);
+				int scoring_data = setScoringMapValue(curr_combo);
+				dc.dice_key = getDiceKey(curr_combo);
 				dc.dice_id = combo_count;
 				dc.sum = scoring_data>>24;
 				dc.is_yahtzee = ((scoring_data>>23) & 1);
@@ -572,8 +577,8 @@ void Yahtzee::setDiceConfigTables(int freq_left, int min, int curr_index, int (&
  * Style: Recursively goes through all possible rolls given the kept dice state. This means
  * 		that impossible dice rolls will not be added to the table.
  */
-void Yahtzee::setDiceProbTable(int num_of_dice, int freq_left, int min, int curr_index, int combo_count, int (&roll_curr_combo)[10],
-		const int (&kept_curr_combo)[10])
+void Yahtzee::setDiceProbTable(int num_of_dice, int freq_left, int min, int curr_index, int (&roll_curr_combo)[10],
+		int (&kept_curr_combo)[10])
 {
 	for(int i = min; i <= 6; i++) {
 		roll_curr_combo[curr_index] = i;
@@ -581,7 +586,7 @@ void Yahtzee::setDiceProbTable(int num_of_dice, int freq_left, int min, int curr
 			roll_curr_combo[curr_index + 1] = j;
 			if(j == freq_left) { // No more dice can be added to combo. Map it!
 				diceProbability dp;
-				dp.kept_dice = combo_count;
+				dp.kept_dice = getDiceKey(kept_curr_combo);
 				dp.next_dice = combineAndGetDiceId(roll_curr_combo, kept_curr_combo);
 				dp.prob_num = getNumerator(num_of_dice, roll_curr_combo);
 				dp.prob_den = (int)std::pow(6, num_of_dice);
@@ -590,13 +595,49 @@ void Yahtzee::setDiceProbTable(int num_of_dice, int freq_left, int min, int curr
 			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
 				break;
 			else // recurse to next highest number and place in combo array
-				setDiceProbTable(num_of_dice, freq_left-j, i+1, curr_index+2, combo_count, roll_curr_combo, kept_curr_combo);
+				setDiceProbTable(num_of_dice, freq_left-j, i+1, curr_index+2, roll_curr_combo, kept_curr_combo);
 		}
 	}
 	// About to return to previous recursion. Reset array values to 0
 	roll_curr_combo[curr_index] = 0;
 	roll_curr_combo[curr_index + 1] = 0;
 	return;
+}
+
+/*
+ * Purpose: Helper function for setDiceProbTable. Needed so we can recurse through possible kept dice states
+ */
+void Yahtzee::setKeptDice(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10]) {
+	// If keeping no dice, special case: roll all dice!
+	if(num_of_dice == 0) {
+		int arr[10] = {0,0,0,0,0,0,0,0,0,0};
+		setDiceProbTable(5, 5, 1, 0, arr, curr_combo);
+	}
+	// Otherwise, recurse through potential kept dice states starting with keeping 1 dice
+	for(int i = min; i <= 6; i++) {
+			curr_combo[curr_index] = i;
+			for(int j = freq_left; j > 0; j--) {
+				curr_combo[curr_index + 1] = j;
+				if(j == freq_left) { // No more dice can be added to combo. Call setDiceProbTable!
+					int arr[10] = {0,0,0,0,0,0,0,0,0,0};
+					setDiceProbTable(5-num_of_dice, 5-num_of_dice, 1, 0, arr, curr_combo);
+				}
+				else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
+					break;
+				else // recurse to next highest number and place in combo array
+					setKeptDice(num_of_dice, freq_left-j, i+1, curr_index+2, curr_combo);
+			}
+		}
+		// About to return to previous recursion. Reset array values to 0
+		curr_combo[curr_index] = 0;
+		curr_combo[curr_index + 1] = 0;
+
+		// Initial recursion finished --> increment # of dice if < 4
+		// You cannot keep more than 4 dice, therefore stop after 4:
+		if(freq_left == num_of_dice && num_of_dice < 4) {
+			setKeptDice(num_of_dice+1, freq_left+1, 1, 0, curr_combo);
+		}
+		return;
 }
 
 /*
@@ -649,10 +690,11 @@ int Yahtzee::combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&k
 	}
 
 	// Finally, grab dice Id from dice id table and return:
-	int dice_key = Yahtzee::getDiceKey(roll);
-	// dice_id = table[dice_key]; --> Basically, figure out how to grab this from table
-	// return dice_id;
-	return 0;
+	int dice_key = getDiceKey(roll);
+	diceConfig dc_data;
+	dc_data.dice_key = dice_key;
+	db.selectDiceConfig(&dc_data);
+	return dc_data.dice_id;
 }
 
 /*int main() {

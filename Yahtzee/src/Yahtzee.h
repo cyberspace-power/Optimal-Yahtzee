@@ -54,6 +54,8 @@ class Yahtzee {
 	void initializeTableDiceProbability();
 	void initializeTableOutput();  // TODO here's the fun(nest) part
 
+	Database db;
+
   private:
 	long curr_state_id;
 	state st;
@@ -61,7 +63,7 @@ class Yahtzee {
 	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
 	std::unordered_map<int, int> kept_dice_map; // Keeps track of ID numbers for kept dice states
 
-	Database db;
+	//Database db;
 
 	// Dice Id functions:
 	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
@@ -82,8 +84,9 @@ class Yahtzee {
 
 	// Table setters
 	void setDiceConfigTables(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
-	void setDiceProbTable(int num_of_dice, int freq_left, int min, int curr_index, int combo_count, int (&roll_curr_combo)[10],
-		const int (&kept_curr_combo)[10]);
+	void setKeptDice(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10]);
+	void setDiceProbTable(int num_of_dice, int freq_left, int min, int curr_index, int (&roll_curr_combo)[10],
+			int (&kept_curr_combo)[10]);
 	// TODO setOutputTable()
 
 	// Helpers for setDiceProbTable:

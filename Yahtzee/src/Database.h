@@ -94,9 +94,9 @@ class Database {
     std::ostringstream insertOutputBuffer;
 
     // number of outstanding items to be inserted not yet committed to the database
-    unsigned int insertDiceConfigBufferCount;
-    unsigned int insertDiceProbabilityBufferCount;
-    unsigned int insertOutputBufferCount;
+    unsigned int insertDiceConfigBufferCount = 0;
+    unsigned int insertDiceProbabilityBufferCount = 0;
+    unsigned int insertOutputBufferCount = 0;
 };
 
 #endif /* DATABASE_H */
