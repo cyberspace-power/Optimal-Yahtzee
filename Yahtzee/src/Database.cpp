@@ -119,6 +119,8 @@ int Database::insertDiceConfig(diceConfig* data, bool forceCommit) {
         insertDiceConfigBuffer << "INSERT INTO DiceConfig\n";
         insertDiceConfigBuffer << "VALUES\n";
     }
+    else // Must be done when you are sure another will be added. Commit will close final insertion
+    	insertDiceConfigBuffer << "),\n"; // Close previous insertion before adding new one
 
     insertDiceConfigBuffer << "(";
     insertDiceConfigBuffer << data->dice_key << ", ";
@@ -139,10 +141,7 @@ int Database::insertDiceConfig(diceConfig* data, bool forceCommit) {
 
     if (forceCommit || insertDiceConfigBufferCount >= insertLimit){
         return commitDiceConfigInsert();
-    } else {
-        insertDiceConfigBuffer << "),\n";
-        insertDiceConfigBufferCount++;
-    }
+    } else insertDiceConfigBufferCount++;
     return 0;
 }
 
@@ -153,6 +152,8 @@ int Database::insertDiceProbability(diceProbability* data, bool forceCommit) {
         insertDiceProbabilityBuffer << "INSERT INTO DiceProbability\n";
         insertDiceProbabilityBuffer << "VALUES\n";
     }
+    else // Must be done when you are sure another will be added. Commit will close final insertion
+        insertDiceConfigBuffer << "),\n"; // Close previous insertion before adding new one
 
     insertDiceProbabilityBuffer << "(";
     insertDiceProbabilityBuffer << data->kept_dice << ", ";
@@ -162,10 +163,7 @@ int Database::insertDiceProbability(diceProbability* data, bool forceCommit) {
 
     if (forceCommit || insertDiceProbabilityBufferCount >= insertLimit){
         return commitDiceProbabilityInsert();
-    } else {
-        insertDiceProbabilityBuffer << "),\n";
-        insertDiceProbabilityBufferCount++;
-    }
+    } else insertDiceProbabilityBufferCount++;
     return 0;
 }
 
@@ -176,6 +174,8 @@ int Database::insertOutput(output* data, bool forceCommit) {
         insertOutputBuffer << "INSERT INTO Output\n";
         insertOutputBuffer << "VALUES\n";
     }
+    else // Must be done when you are sure another will be added. Commit will close final insertion
+        insertDiceConfigBuffer << "),\n"; // Close previous insertion before adding new one
 
     insertOutputBuffer << "(";
     insertOutputBuffer << data->state << ", ";
@@ -185,10 +185,7 @@ int Database::insertOutput(output* data, bool forceCommit) {
 
     if (forceCommit || insertOutputBufferCount >= insertLimit){
         return commitOutputInsert();
-    } else {
-        insertOutputBuffer << "),\n";
-        insertOutputBufferCount++;
-    }
+    } else insertOutputBufferCount++;
     return 0;
 }
 

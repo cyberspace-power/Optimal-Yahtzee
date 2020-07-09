@@ -24,7 +24,7 @@ Yahtzee::Yahtzee(state start_state) {
 	std::string filename = "test.db";
 	db.setFilename(filename);
 	initializeTableDiceConfig();
-	initializeTableDiceProbability();
+	//initializeTableDiceProbability();
 
 	st = start_state;
 	if(st.y_bonus_state && (((st.sc_status>>11) & 1) != 1)) {
@@ -54,7 +54,7 @@ Yahtzee::Yahtzee() {
 	std::string filename = "test.db";
 	db.setFilename(filename);
 	initializeTableDiceConfig();
-	initializeTableDiceProbability();
+	//initializeTableDiceProbability();
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
