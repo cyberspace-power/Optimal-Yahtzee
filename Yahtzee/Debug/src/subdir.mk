@@ -7,21 +7,18 @@ CPP_SRCS += \
 ../src/Database.cpp \
 ../src/Yahtzee.cpp \
 ../src/YahtzeeGame.cpp \
-../src/YahtzeeTableSet.cpp \
 ../src/test.cpp 
 
 OBJS += \
 ./src/Database.o \
 ./src/Yahtzee.o \
 ./src/YahtzeeGame.o \
-./src/YahtzeeTableSet.o \
 ./src/test.o 
 
 CPP_DEPS += \
 ./src/Database.d \
 ./src/Yahtzee.d \
 ./src/YahtzeeGame.d \
-./src/YahtzeeTableSet.d \
 ./src/test.d 
 
 
