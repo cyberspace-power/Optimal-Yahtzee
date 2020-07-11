@@ -34,15 +34,15 @@ typedef struct diceConfig {
 typedef struct diceProbability {
         int kept_dice;
         int next_dice;
-        unsigned int prob_num;  // probabilities stored as fractions to retain information
-        unsigned int prob_den;
+        unsigned int prob_num = 0;  // probabilities stored as fractions to retain information
+        unsigned int prob_den = 1;
 } diceProbability;
 
 typedef struct output {
         int state;
         int optimal_play;
-        unsigned int prob_num;  // probabilities stored as fractions to retain information
-        unsigned int prob_den;
+        unsigned int prob_num = 0;  // probabilities stored as fractions to retain information
+        unsigned int prob_den = 1;
 } output;
 
 class Database {

@@ -20,9 +20,9 @@ int main() {
 
     diceConfig dc_data;
     dc_data.dice_id = 123;
-    db.selectDiceConfig(&dc_data);
+    db.selectDiceConfig(&dc_data);*/
 
-    std::cout << "DICE CONFIG: " << dc_data.dice_id << " - num 1s: " << dc_data.num_1s << std::endl;*/
+    //std::cout << "DICE CONFIG: " << dc_data.dice_id << " - num 1s: " << dc_data.num_1s << std::endl;
 
 	Yahtzee y;
 	diceProbability dp_data;

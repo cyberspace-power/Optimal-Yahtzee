@@ -91,11 +91,10 @@ void Database::createTableDiceConfig() {
 void Database::createTableDiceProbability() {
     std::string sql;
     sql = "CREATE TABLE IF NOT EXISTS DiceProbability ("  \
-        "kept_dice INTEGER NOT NULL UNIQUE," \
+        "kept_dice INTEGER NOT NULL," \
         "next_dice INTEGER," \
         "prob_num INTEGER," \
-        "prob_den INTEGER," \
-        "PRIMARY KEY(kept_dice)" \
+        "prob_den INTEGER" \
         ");";
     exec(sql);
 }
@@ -153,7 +152,7 @@ int Database::insertDiceProbability(diceProbability* data, bool forceCommit) {
         insertDiceProbabilityBuffer << "VALUES\n";
     }
     else // Must be done when you are sure another will be added. Commit will close final insertion
-        insertDiceConfigBuffer << "),\n"; // Close previous insertion before adding new one
+        insertDiceProbabilityBuffer << "),\n"; // Close previous insertion before adding new one
 
     insertDiceProbabilityBuffer << "(";
     insertDiceProbabilityBuffer << data->kept_dice << ", ";
@@ -175,7 +174,7 @@ int Database::insertOutput(output* data, bool forceCommit) {
         insertOutputBuffer << "VALUES\n";
     }
     else // Must be done when you are sure another will be added. Commit will close final insertion
-        insertDiceConfigBuffer << "),\n"; // Close previous insertion before adding new one
+        insertOutputBuffer << "),\n"; // Close previous insertion before adding new one
 
     insertOutputBuffer << "(";
     insertOutputBuffer << data->state << ", ";
@@ -207,7 +206,7 @@ void Database::selectDiceConfig(diceConfig* data) {
 
     rc = sqlite3_exec(db, sql.str().c_str(), selectDiceConfigCallback, (void*)data, &zErrMsg);
     if( rc != SQLITE_OK ){
-        std::cout << "SQL error: " << zErrMsg << std::endl;
+        std::cout << "SQL error: " << zErrMsg << "; " << sql.str() << std::endl;
         sqlite3_free(zErrMsg);
     }
 }
@@ -266,6 +265,7 @@ int Database::commitDiceConfigInsert() {
     ret = exec(insertDiceConfigBuffer.str());
 
     if (ret != 0) {
+    	std::cout << "commit error\n";
         return ret;
     }
 
@@ -316,7 +316,7 @@ int Database::commitOutputInsert() {
 int Database::selectDiceConfigCallback(void *void_data, int argc, char **argv, char **azColName){
     diceConfig* data = (diceConfig*)void_data;
 
-    if (argc != 14) {
+    if (argc != 15) {
         data->dice_id = -1;  // to indicate error
         return -1;
     }

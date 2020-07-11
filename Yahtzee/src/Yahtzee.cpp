@@ -24,7 +24,7 @@ Yahtzee::Yahtzee(state start_state) {
 	std::string filename = "test.db";
 	db.setFilename(filename);
 	initializeTableDiceConfig();
-	//initializeTableDiceProbability();
+	initializeTableDiceProbability();
 
 	st = start_state;
 	if(st.y_bonus_state && (((st.sc_status>>11) & 1) != 1)) {
@@ -54,7 +54,7 @@ Yahtzee::Yahtzee() {
 	std::string filename = "test.db";
 	db.setFilename(filename);
 	initializeTableDiceConfig();
-	//initializeTableDiceProbability();
+	initializeTableDiceProbability();
 	// There will be 252 dice states (including null roll). Set map to
 	// be ready for 252 entries. Reduces rehashing that can slow speed
 	dice_state_map.reserve(252);
@@ -508,13 +508,15 @@ int Yahtzee::takeSection(int section) {
 
 // A wrapper to initialize dice config table
 void Yahtzee::initializeTableDiceConfig() {
-    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
+    //todo: if data exists, return
+	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
     int combo_count = 1;
     setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
 }
 
 // A wrapper to initialize dice probability table
 void Yahtzee::initializeTableDiceProbability() {
+	//todo: if data exists, return
 	//int partial_roll[10] = {0,0,0,0,0,0,0,0,0,0};
     int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
     // Calls wrapper that specifies kept dice state before recursing through possible rolls
@@ -523,6 +525,7 @@ void Yahtzee::initializeTableDiceProbability() {
 
 // A wrapper to initialize dice probability table
 void Yahtzee::initializeTableOutput() {
+	//todo: if data exists, return
 	// TODO :)
 }
 
