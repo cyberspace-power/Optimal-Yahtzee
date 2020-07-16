@@ -98,9 +98,8 @@ void Database::createTableDiceProbability() {
         ");";
     exec(sql);
 
-
-    sql = "CREATE INDEX dice_probability_index" \ 
-    "ON DiceProbability (kept_dice, next_dice);";
+    sql = "CREATE INDEX dice_probability_index" \
+    " ON DiceProbability (kept_dice, next_dice);";
     exec(sql);
 }
 
