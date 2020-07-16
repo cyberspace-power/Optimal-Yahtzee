@@ -439,9 +439,13 @@ void Yahtzee::initializeTableDiceConfig() {
 		int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 		int combo_count = 1;
 		setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
+		diceConfig dc_data;
+		dc_data.dice_key = 0;
+		db.selectDiceConfig(&dc_data, true);
     }
     else
     	std::cout << "DiceConfig data already exists. Skipping dice config table initialization.";
+
 }
 
 // A wrapper to initialize dice probability table
@@ -453,6 +457,10 @@ void Yahtzee::initializeTableDiceProbability() {
 		int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 		// Calls wrapper that specifies kept dice state before recursing through possible rolls
 		setKeptDice(0, 0, 1, 0, curr_combo);
+		diceProbability dc_prob;
+		dc_prob.kept_dice = 0;
+		dc_prob.next_dice = 1;
+		db.selectDiceProbability(&dc_prob);
 	}
 	else
 		std::cout << "DiceProbability data already exists. Skipping dice probability table initialization.";
@@ -463,6 +471,7 @@ void Yahtzee::initializeTableOutput() {
 	std::string str = "Output";
 	if(db.getRowCount(str) == 0) { // Table has not yet been created
 		// TODO :)
+
 	}
 	else
 		std::cout << "Output data already exists. Skipping output table initialization.";
