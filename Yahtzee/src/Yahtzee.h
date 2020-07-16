@@ -55,19 +55,9 @@ class Yahtzee {
 	void initializeTableOutput();  // TODO here's the fun(nest) part
 
 	Database db;
-
   private:
 	long curr_state_id;
 	state st;
-	std::unordered_map<int, int> dice_state_map; // maps dice state to 8 bit dice state id
-	std::unordered_map<int, int> dice_scoring_map; // Keeps track of what sections can be taken
-	std::unordered_map<int, int> kept_dice_map; // Keeps track of ID numbers for kept dice states
-
-	//Database db;
-
-	// Dice Id functions:
-	void setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
-	void setKeptDiceMap(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count);
 
 	// State Id Functions:
 	unsigned char setUpperBonusStateId();
@@ -79,7 +69,7 @@ class Yahtzee {
 	static bool isSmallStraight(int (&curr_combo)[10]);
 	static bool isLargeStraight(int (&curr_combo)[10]);
 	static bool isYahtzee(int (&curr_combo)[10]);
-	bool isJoker(int scoring_info, int section); // Helper for takeSection()
+	bool isJoker(const diceConfig &dc, int section); // Helper for takeSection()
 	bool isSectionTaken(int section); // Helper for takeSection()
 
 	// Table setters

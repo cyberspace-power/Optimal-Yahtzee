@@ -189,9 +189,10 @@ int Database::insertOutput(output* data, bool forceCommit) {
 }
 
 // fills in the data parameter with the contents of the corresponding row in the database
-// data.dice_id needs to be set before this method is called
+// data.dice_id or data.dice_key needs to be set before this method is called
 // sets the data.dice_id field to -1 on error
-void Database::selectDiceConfig(diceConfig* data) {
+// bool dice_key: true = dice key lookup; false = dice_id lookup
+void Database::selectDiceConfig(diceConfig* data, bool dice_key) {
     char *zErrMsg = 0;
     int rc;
     std::ostringstream sql;
@@ -201,13 +202,25 @@ void Database::selectDiceConfig(diceConfig* data) {
         commitDiceConfigInsert();
     }
 
-    sql << "SELECT * FROM DiceConfig\n";
-    sql << "WHERE dice_key=" << data->dice_key << ";";
+    if(dice_key) { // If dice_key is used for the lookup:
+		sql << "SELECT * FROM DiceConfig\n";
+		sql << "WHERE dice_key=" << data->dice_key << ";";
 
-    rc = sqlite3_exec(db, sql.str().c_str(), selectDiceConfigCallback, (void*)data, &zErrMsg);
-    if( rc != SQLITE_OK ){
-        std::cout << "SQL error: " << zErrMsg << "; " << sql.str() << std::endl;
-        sqlite3_free(zErrMsg);
+		rc = sqlite3_exec(db, sql.str().c_str(), selectDiceConfigCallback, (void*)data, &zErrMsg);
+		if( rc != SQLITE_OK ){
+			std::cout << "SQL error: " << zErrMsg << "; " << sql.str() << std::endl;
+			sqlite3_free(zErrMsg);
+		}
+    }
+    else { // Else if dice_id is used for lookup
+    	sql << "SELECT * FROM DiceConfig\n";
+		sql << "WHERE dice_id=" << data->dice_id << ";";
+
+		rc = sqlite3_exec(db, sql.str().c_str(), selectDiceConfigCallback, (void*)data, &zErrMsg);
+		if( rc != SQLITE_OK ){
+			std::cout << "SQL error: " << zErrMsg << "; " << sql.str() << std::endl;
+			sqlite3_free(zErrMsg);
+		}
     }
 }
 
@@ -258,6 +271,42 @@ void Database::selectOutput(output* data) {
     }
 }
 
+// fills in the data parameter with the contents of the corresponding row in the database
+// data.kept_dice and data.next_dice need to be set before this method is called
+// sets the data.kept_dice field to -1 on error
+int Database::getRowCount(std::string& table) {
+    char *zErrMsg = 0;
+    int count = 0;
+    int rc;
+    std::ostringstream sql;
+
+    // commit any outstanding INSERTs before performing SELECT
+    std::cout << insertDiceProbabilityBuffer.str().c_str() << std::endl;
+    if (insertDiceProbabilityBufferCount > 0) {
+		commitDiceProbabilityInsert();
+	}
+    if (insertDiceConfigBufferCount > 0) {
+    	commitDiceConfigInsert();
+    }
+    if (insertOutputBufferCount > 0) {
+    	commitOutputInsert();
+    }
+
+    if(table.compare("DiceConfig") == 0)
+    	sql << "SELECT Count(*) FROM DiceConfig;\n";
+    else if(table.compare("DiceProbability") == 0)
+    	sql << "SELECT Count(*) FROM DiceProbability;\n";
+    else
+    	sql << "SELECT Count(*) FROM Output;\n";
+
+    rc = sqlite3_exec(db, sql.str().c_str(), countCallback, &count, &zErrMsg);
+    if( rc != SQLITE_OK ){
+        std::cout << "SQL error: " << zErrMsg << std::endl;
+        sqlite3_free(zErrMsg);
+    }
+    return count;
+}
+
 int Database::commitDiceConfigInsert() {
     int ret;
 
@@ -279,6 +328,7 @@ int Database::commitDiceConfigInsert() {
 
 int Database::commitDiceProbabilityInsert() {
     int ret;
+    std::cout << "hello\n";
 
     insertDiceProbabilityBuffer << ");";
     ret = exec(insertDiceProbabilityBuffer.str());
@@ -370,4 +420,10 @@ int Database::selectOutputCallback(void *void_data, int argc, char **argv, char 
     data->prob_den  = atoi(argv[3]);
 
     return 0;
+}
+
+int Database::countCallback(void *count, int argc, char **argv, char **azColName) {
+	int *c = (int*) count;
+	*c = atoi(argv[0]);
+	return 0;
 }

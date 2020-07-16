@@ -213,13 +213,13 @@ int getSectionToTakeInput(int player_num, YahtzeeGame & yg) {
 	return section;
 }
 
-/*int main() {
+int main() {
 	int players = getNumberOfPlayersInput();
 	YahtzeeGame game(players);
 	Yahtzee curr_players[players];
-	// Quick and dirty fix for yahtze object reset bug
-	for(int i = 0; i < players; i++)
-		curr_players[i] = game.getPlayer(i).y;
+	// Quick and dirty fix for yahtzee object reset bug
+	/*for(int i = 0; i < players; i++)
+		curr_players[i] = game.getPlayer(i).y();*/
 
 	for(int turn = 1; turn <= 13; turn++) {
 		for(int pl = 0; pl < players; pl++) {
@@ -266,4 +266,4 @@ int getSectionToTakeInput(int player_num, YahtzeeGame & yg) {
 		std::cout << "Player " << (pl+1) << ": " << game.getScorecard(pl).total_score << std::endl;
 	}
 	std::cin.clear();
-}*/
+}

@@ -67,9 +67,12 @@ class Database {
     int insertOutput(output* data, bool forceCommit);
 
     // get a row from the table
-    void selectDiceConfig(diceConfig* data);
+    void selectDiceConfig(diceConfig* data, bool dice_key);
     void selectDiceProbability(diceProbability* data);
     void selectOutput(output* data);
+
+    // get number of rows in table
+    int getRowCount(std::string& table_name);
 
   private:
     bool opened = false;  // has the database connection been established?
@@ -83,6 +86,9 @@ class Database {
     static int selectDiceConfigCallback(void *void_data, int argc, char **argv, char **azColName);
     static int selectDiceProbabilityCallback(void *void_data, int argc, char **argv, char **azColName);
     static int selectOutputCallback(void *void_data, int argc, char **argv, char **azColName);
+
+    // helper required for getting number of rows in table
+    static int countCallback(void *count, int argc, char **argv, char **azColName);
 
     sqlite3 *db;
 

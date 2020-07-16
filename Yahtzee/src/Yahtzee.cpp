@@ -32,13 +32,6 @@ Yahtzee::Yahtzee(state start_state) {
 		st.y_bonus_state = false;
 		std::cout << "Had to reset y_bonus to false\n";
 	}
-	// There will be 252 dice states (including null roll). Set map to
-	// be ready for 252 entries. Reduces rehashing that can slow speed
-	dice_state_map.reserve(252);
-	dice_scoring_map.reserve(252);
-	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
-	int combo_count = 1;
-	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
 	updateStateId();
 	// print state in bits to diagnose any errors
 	std::bitset<64> b(curr_state_id);
@@ -55,16 +48,7 @@ Yahtzee::Yahtzee() {
 	db.setFilename(filename);
 	initializeTableDiceConfig();
 	initializeTableDiceProbability();
-	// There will be 252 dice states (including null roll). Set map to
-	// be ready for 252 entries. Reduces rehashing that can slow speed
-	dice_state_map.reserve(252);
-	dice_scoring_map.reserve(252);
-	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0}; // Bug fix: SET ARRAY!!!
-	int combo_count = 1;
-	setDiceMaps(5, 1, 0, curr_combo, combo_count); // Sets the dice state unordered map
-	combo_count = 0;
-	setKeptDiceMap(0, 0, 1, 0, curr_combo, combo_count);
-	//setDiceProbTable();
+
 	curr_state_id = 1 << 8; // Initial state at beginning of new game
 	std::vector<int> d(5,1);
 	st.dice = d;
@@ -74,79 +58,6 @@ Yahtzee::Yahtzee() {
 	st.y_bonus_state = 0;
 	st.is_new_turn = true;
 	srand(time(0)); // Set seed for RNG
-}
-
-void Yahtzee::setKeptDiceMap(int num_of_dice, int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
-	if(num_of_dice == 0) {
-		kept_dice_map[0] = combo_count;
-		combo_count++;
-	}
-	for(int i = min; i <= 6; i++) {
-			curr_combo[curr_index] = i;
-			for(int j = freq_left; j > 0; j--) {
-				curr_combo[curr_index + 1] = j;
-				if(j == freq_left) { // No more dice can be added to combo. Map it!
-
-				}
-				else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
-					break;
-				else // recurse to next highest number and place in combo array
-					setKeptDiceMap(num_of_dice, freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
-			}
-		}
-		// About to return to previous recursion. Reset array values to 0
-		curr_combo[curr_index] = 0;
-		curr_combo[curr_index + 1] = 0;
-
-		// Initial recursion finished --> increment # of dice if < 4
-		// You cannot keep more than 4 dice, therefore stop after 4:
-		if(freq_left == num_of_dice && num_of_dice < 4) {
-			setKeptDiceMap(num_of_dice+1, freq_left+1, 1, 0, curr_combo, combo_count);
-		}
-		return;
-}
-
-/*
- * Purpose: Set the dice state map and dice scoring map to allow for constant time lookups
- *    The unordered_map from STL is used to track this mapping
- * Style: Recursive function that iterates through all possible
- *    dice combinations and maps them to the number of mapped combos
- *    to that point (i.e. A number between 1-252)
- */
-void Yahtzee::setDiceMaps(int freq_left, int min, int curr_index, int (&curr_combo)[10], int &combo_count) {
-	for(int i = min; i <= 6; i++) {
-		curr_combo[curr_index] = i;
-		for(int j = freq_left; j > 0; j--) {
-			curr_combo[curr_index + 1] = j;
-			if(j == freq_left) { // No more dice can be added to combo. Map it!
-				if(dice_state_map.find(getDiceKey(curr_combo)) != dice_state_map.end())
-					std::cout << "Error -- Element already exists\n";
-				dice_state_map[getDiceKey(curr_combo)] = combo_count;
-				dice_scoring_map[combo_count] = setScoringMapValue(curr_combo);
-
-				// Print for testing purposes
-				/*std::cout << combo_count << ": " << std::endl;
-				for(int i = 0; i <= curr_index; i += 2) {
-					std::cout << curr_combo[i] << ": " << curr_combo[i+1] << ", ";
-				}
-				std::cout << std::endl;
-				int temp = dice_scoring_map[combo_count];
-				printf("Sum = %d\n3oK: %d; 4oK: %d; FH: %d; SS: %d; LS: %d; Yah: %d\n1s: %d; 2s: %d; 3s: %d; 4s: %d; 5s: %d; 6s: %d\n\n",
-						temp>>24, (int)is3OfKind(curr_combo), (int)is4OfKind(curr_combo), (int)isFullHouse(curr_combo),
-						(int)isSmallStraight(curr_combo), (int)isLargeStraight(curr_combo), (int)isYahtzee(curr_combo),
-						temp & 0x7, (temp>>3) & 0x7, (temp>>6) & 0x7, (temp>>9) & 0x7, (temp>>12) & 0x7, (temp>>15) & 0x7);*/
-				combo_count++;
-			}
-			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
-				break;
-			else // recurse to next highest number and place in combo array
-				setDiceMaps(freq_left-j, i+1, curr_index+2, curr_combo, combo_count);
-		}
-	}
-	// About to return to previous recursion. Reset array values to 0
-	curr_combo[curr_index] = 0;
-	curr_combo[curr_index + 1] = 0;
-	return;
 }
 
 /*
@@ -186,7 +97,10 @@ unsigned char Yahtzee::getDiceStateId() {
 		}
 	}
 	int key = getDiceKey(dice_multisets);
-	return dice_state_map.at(key);
+	diceConfig dc_data;
+	dc_data.dice_key = key;
+	db.selectDiceConfig(&dc_data, true);
+	return dc_data.dice_id;
 }
 
 /*
@@ -364,18 +278,18 @@ int Yahtzee::setScoringMapValue(int (&curr_combo)[10]) {
  * 		the 100 point bonus should be applied
  * Returns: True if lower section can be taken for full point total, false otherwise
  */
-bool Yahtzee::isJoker(int scoring_info, int section) {
+bool Yahtzee::isJoker(const diceConfig &dc, int section) {
 	// Joker rule doesn't apply unless roll is yahtzee and yahtzee has been taken for 0 or 50 points
-	if(!isSectionTaken(12) || (scoring_info>>23 & 1) != 1)
+	if(!isSectionTaken(12) || !dc.is_yahtzee)
 		return false;
 	// Determine what number the yahtzee is in
 	int yahtzee_dice_num = 0;
-	for(int i = 0; i <= 6; i++) {
-		if(scoring_info>>(3*i) & 0x7) {
-			yahtzee_dice_num = i+1;
-			break;
-		}
-	}
+	if(dc.num_1s == 5) yahtzee_dice_num = 1;
+	else if(dc.num_2s == 5) yahtzee_dice_num = 2;
+	else if(dc.num_3s == 5) yahtzee_dice_num = 3;
+	else if(dc.num_4s == 5) yahtzee_dice_num = 4;
+	else if(dc.num_5s == 5) yahtzee_dice_num = 5;
+	else if(dc.num_6s == 5) yahtzee_dice_num = 6;
 
 	// You are not allowed to take lower section with the joker rule unless the corresponding upper
 	// section total of the yahtzee dice value has already been taken. This checks for that
@@ -423,59 +337,70 @@ int Yahtzee::takeSection(int section) {
 	}
 	else
 		st.sc_status |= 1<<(section-1);
-	int scoring_info = dice_scoring_map[curr_state_id & 0xff]; // First get scoring info mapped by dice state ID
+
+	diceConfig dc;
+	dc.dice_id = (unsigned short) getDiceStateId();
+	db.selectDiceConfig(&dc, false);
+	//int scoring_info = dice_scoring_map[curr_state_id & 0xff]; // First get scoring info mapped by dice state ID
+
 	bool is_bonus_achieved = (setUpperBonusStateId() == 63) ? true : false;
 	int score = 0;
-	if(section <= 6) { // If upper section (Minimizes code in cases 1-6 of switch statement)
-		score = section * ((scoring_info >> ((section-1) * 3)) & 0x7);
-		//sc.upper_score += score;
-		st.up_total += score; // Increase state's upper total (may be different than scorecard's if game was started from middle state
-		//sc.total_score += score;
-	}
 
 	switch(section)
 	{
 	  case 1: // Ones
+		score = section * dc.num_1s;
+		st.up_total += score;
 		break;
 	  case 2: // Twos
+	    score = section * dc.num_2s;
+		st.up_total += score;
 		break;
 	  case 3: // Threes
+		score = section * dc.num_3s;
+		st.up_total += score;
 		break;
 	  case 4: // Fours
+	    score = section * dc.num_4s;
+		st.up_total += score;
 		break;
 	  case 5: // Fives
+		score = section * dc.num_5s;
+		st.up_total += score;
 		break;
 	  case 6: // Sixes
+		score = section * dc.num_6s;
+		st.up_total += score;
 		break;
 	  case 7: // Three of a Kind
-		score = ((scoring_info>>18) & 1) ? (scoring_info>>24) : 0;
+		score = dc.is_3_of_a_kind ? dc.sum : 0;
 		break;
 	  case 8: // Four of a Kind
-		score = ((scoring_info>>19) & 1) ? (scoring_info>>24) : 0;
+		score = dc.is_4_of_a_kind ? dc.sum : 0;
 		break;
 	  case 9: // Full House
-		if(((scoring_info>>20) & 1) || isJoker(scoring_info, section)) {
+		if(dc.is_full_house || isJoker(dc, section)) {
 			score = 25;
 		}
 		else
 			score = 0;
 		break;
 	  case 10: // Small Straight
-		if(((scoring_info>>21) & 1) || isJoker(scoring_info, section)) {
+		if(dc.is_small_straight || isJoker(dc, section)) {
 			score = 30;
 		}
 		else
 			score = 0;
 		break;
 	  case 11: // Large Straight
-		if(((scoring_info>>22) & 1) || isJoker(scoring_info, section)) {
+		if(dc.is_large_straight || isJoker(dc, section)) {
 			score = 40;
 		}
 		else
 			score = 0;
 		break;
 	  case 12: // Yahtzee
-		if((scoring_info>>23) & 1) {
+		if(dc.is_yahtzee) {
 			score = 50;
 			st.y_bonus_state = true;
 		}
@@ -483,7 +408,7 @@ int Yahtzee::takeSection(int section) {
 			score = 0;
 		break;
 	  case 13: // Chance
-		score = scoring_info>>24; // Sum of dice
+		score = dc.sum; // Sum of dice
 		break;
 	}
 	// Add upper section bonus
@@ -491,7 +416,7 @@ int Yahtzee::takeSection(int section) {
 		score += 35;
 	}
 	// Add yahtzee joker bonuses
-	if(st.y_bonus_state && isJoker(scoring_info, section)) {
+	if(st.y_bonus_state && isJoker(dc, section)) {
 		score += 100;
 	}
 
@@ -508,25 +433,39 @@ int Yahtzee::takeSection(int section) {
 
 // A wrapper to initialize dice config table
 void Yahtzee::initializeTableDiceConfig() {
-    //todo: if data exists, return
-	int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
-    int combo_count = 1;
-    setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
+	std::string str = "DiceConfig";
+	std::cout << db.getRowCount(str) << std::endl;
+    if(db.getRowCount(str) == 0) { // Table has not yet been created
+		int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
+		int combo_count = 1;
+		setDiceConfigTables(5, 1, 0, curr_combo, combo_count);
+    }
+    else
+    	std::cout << "DiceConfig data already exists. Skipping dice config table initialization.";
 }
 
 // A wrapper to initialize dice probability table
 void Yahtzee::initializeTableDiceProbability() {
-	//todo: if data exists, return
-	//int partial_roll[10] = {0,0,0,0,0,0,0,0,0,0};
-    int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
-    // Calls wrapper that specifies kept dice state before recursing through possible rolls
-    setKeptDice(0, 0, 1, 0, curr_combo);
+	std::string str = "DiceProbability";
+	int count = db.getRowCount(str);
+	std::cout << "\nDice Probability: " << count << std::endl;
+	if(count == 0) { // Table has not yet been created
+		int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
+		// Calls wrapper that specifies kept dice state before recursing through possible rolls
+		setKeptDice(0, 0, 1, 0, curr_combo);
+	}
+	else
+		std::cout << "DiceProbability data already exists. Skipping dice probability table initialization.";
 }
 
 // A wrapper to initialize dice probability table
 void Yahtzee::initializeTableOutput() {
-	//todo: if data exists, return
-	// TODO :)
+	std::string str = "Output";
+	if(db.getRowCount(str) == 0) { // Table has not yet been created
+		// TODO :)
+	}
+	else
+		std::cout << "Output data already exists. Skipping output table initialization.";
 }
 
 /*
@@ -559,7 +498,6 @@ void Yahtzee::setDiceConfigTables(int freq_left, int min, int curr_index, int (&
 				dc.num_5s = ((scoring_data>>12) & 0x7);
 				dc.num_6s = ((scoring_data>>15) & 0x7);
 				db.insertDiceConfig(&dc, 0);
-
 				combo_count++; // Increment combo count
 			}
 			else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
@@ -696,7 +634,7 @@ int Yahtzee::combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&k
 	int dice_key = getDiceKey(roll);
 	diceConfig dc_data;
 	dc_data.dice_key = dice_key;
-	db.selectDiceConfig(&dc_data);
+	db.selectDiceConfig(&dc_data, true);
 	return dc_data.dice_id;
 }
 

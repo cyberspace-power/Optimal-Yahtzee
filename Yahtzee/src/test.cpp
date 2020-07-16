@@ -4,7 +4,7 @@
 #include <iostream>
 
 // Example database usage
-int main() {
+/*int main() {
     /*std::string filename = "test.db";
     Database db = Database(filename);
 
@@ -20,7 +20,7 @@ int main() {
 
     diceConfig dc_data;
     dc_data.dice_id = 123;
-    db.selectDiceConfig(&dc_data);*/
+    db.selectDiceConfig(&dc_data);
 
     //std::cout << "DICE CONFIG: " << dc_data.dice_id << " - num 1s: " << dc_data.num_1s << std::endl;
 
@@ -31,4 +31,4 @@ int main() {
 	y.db.selectDiceProbability(&dp_data);
 	std::cout << "PROBABILITY: " << dp_data.prob_num << "/" << dp_data.prob_den << std::endl;
     return 0;
-}
+}*/
