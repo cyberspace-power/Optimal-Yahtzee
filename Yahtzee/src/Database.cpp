@@ -97,6 +97,11 @@ void Database::createTableDiceProbability() {
         "prob_den INTEGER" \
         ");";
     exec(sql);
+
+
+    sql = "CREATE INDEX dice_probability_index" \ 
+    "ON DiceProbability (kept_dice, next_dice);";
+    exec(sql);
 }
 
 void Database::createTableOutput() {
