@@ -51,8 +51,7 @@ void Database::setFilename(std::string& filename) {
 int Database::exec(const std::string& str) {
     char *zErrMsg = 0;
     int rc;
-
-    std::cout << str << std::endl << std::endl;
+    std::cout << "  SQL: " << str << std::endl;
 
     rc = sqlite3_exec(db, str.c_str(), NULL, 0, &zErrMsg);
     if( rc != SQLITE_OK ){
@@ -60,7 +59,6 @@ int Database::exec(const std::string& str) {
         sqlite3_free(zErrMsg);
         return -1;
     } else {
-        // std::cout << "Completed operation successfully" << std::endl;
         return 0;
     }
 }
@@ -98,9 +96,12 @@ void Database::createTableDiceProbability() {
         ");";
     exec(sql);
 
-    sql = "CREATE INDEX dice_probability_index" \
-    " ON DiceProbability (kept_dice, next_dice);";
-    exec(sql);
+    std::string str = "DiceProbability";
+    if(getRowCount(str) == 0) { // Check if table has already existed. If yes, don't recreate the index
+		sql = "CREATE INDEX dice_probability_index" \
+		" ON DiceProbability (kept_dice, next_dice);";
+		exec(sql);
+	}
 }
 
 void Database::createTableOutput() {
@@ -285,7 +286,6 @@ int Database::getRowCount(std::string& table) {
     std::ostringstream sql;
 
     // commit any outstanding INSERTs before performing SELECT
-    std::cout << insertDiceProbabilityBuffer.str().c_str() << std::endl;
     if (insertDiceProbabilityBufferCount > 0) {
 		commitDiceProbabilityInsert();
 	}

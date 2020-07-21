@@ -39,7 +39,7 @@ typedef struct diceProbability {
 } diceProbability;
 
 typedef struct output {
-        int state;
+        long state;
         int optimal_play;
         unsigned int prob_num = 0;  // probabilities stored as fractions to retain information
         unsigned int prob_den = 1;

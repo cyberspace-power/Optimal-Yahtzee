@@ -150,7 +150,7 @@ void Yahtzee::roll(int kept_dice_state) {
 	}
 
 	// For testing purposes
-	std::cout << "Roll: ";
+	std::cout << "\nRoll: ";
 	for(int i = 0; i < 5; i++) {
 		if(is_roll[i])
 			std::cout << st.dice[i] << ", ";
@@ -434,7 +434,6 @@ int Yahtzee::takeSection(int section) {
 // A wrapper to initialize dice config table
 void Yahtzee::initializeTableDiceConfig() {
 	std::string str = "DiceConfig";
-	std::cout << db.getRowCount(str) << std::endl;
     if(db.getRowCount(str) == 0) { // Table has not yet been created
 		int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 		int combo_count = 1;
@@ -444,7 +443,7 @@ void Yahtzee::initializeTableDiceConfig() {
 		db.selectDiceConfig(&dc_data, true);
     }
     else
-    	std::cout << "DiceConfig data already exists. Skipping dice config table initialization.";
+    	std::cout << "DiceConfig data already exists. Skipping dice config table initialization.\n";
 
 }
 
@@ -452,7 +451,6 @@ void Yahtzee::initializeTableDiceConfig() {
 void Yahtzee::initializeTableDiceProbability() {
 	std::string str = "DiceProbability";
 	int count = db.getRowCount(str);
-	std::cout << "\nDice Probability: " << count << std::endl;
 	if(count == 0) { // Table has not yet been created
 		int curr_combo[10] = {0,0,0,0,0,0,0,0,0,0};
 		// Calls wrapper that specifies kept dice state before recursing through possible rolls
@@ -463,7 +461,7 @@ void Yahtzee::initializeTableDiceProbability() {
 		db.selectDiceProbability(&dc_prob);
 	}
 	else
-		std::cout << "DiceProbability data already exists. Skipping dice probability table initialization.";
+		std::cout << "DiceProbability data already exists. Skipping dice probability table initialization.\n";
 }
 
 // A wrapper to initialize dice probability table
@@ -474,7 +472,7 @@ void Yahtzee::initializeTableOutput() {
 
 	}
 	else
-		std::cout << "Output data already exists. Skipping output table initialization.";
+		std::cout << "Output data already exists. Skipping output table initialization.\n";
 }
 
 /*

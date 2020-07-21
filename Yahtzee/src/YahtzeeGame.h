@@ -40,7 +40,6 @@ typedef struct scorecard {
 
 typedef struct player {
 	scorecard sc;
-	Yahtzee y;
 	int turn = 1;
 } player;
 

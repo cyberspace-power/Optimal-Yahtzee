@@ -217,9 +217,6 @@ int main() {
 	int players = getNumberOfPlayersInput();
 	YahtzeeGame game(players);
 	Yahtzee curr_players[players];
-	// Quick and dirty fix for yahtzee object reset bug
-	/*for(int i = 0; i < players; i++)
-		curr_players[i] = game.getPlayer(i).y();*/
 
 	for(int turn = 1; turn <= 13; turn++) {
 		for(int pl = 0; pl < players; pl++) {
