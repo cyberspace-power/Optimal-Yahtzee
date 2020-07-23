@@ -79,10 +79,11 @@ class Yahtzee {
 			int (&kept_curr_combo)[10]);
 	// TODO setOutputTable()
 
-	// Helpers for setDiceProbTable:
-	int getNumerator(int num_of_dice, const int (&roll_curr_combo)[10]);
-	static int factorial(int x);
-	int combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&kept_curr_combo)[10]);
+	// Helpers for table setters:
+	int getNumerator(int num_of_dice, const int (&roll_curr_combo)[10]); // helps DiceProb
+	static int factorial(int x); // helps DiceProb
+	int combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&kept_curr_combo)[10]); // helps DiceProb and Output
+	void reduce(int &num, int &den);
 };
 
 #endif /* YAHTZEE_H */

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <bitset> // print out bits
 #include <algorithm> // sort
+#include <numeric>
 #include <cstdlib> // rand, atoi
 #include <ctime> // time() used to seed RNG
 #include <string>
@@ -17,6 +18,54 @@
 
 #include "Yahtzee.h"
 #include "Database.h"
+
+class Fraction {
+  public:
+	unsigned int num;
+	unsigned int den;
+
+	Fraction(unsigned int num, unsigned int den) : num(num), den(den) {
+		*this = reduce();
+	}
+
+	// Add two fractions together
+	Fraction add(Fraction& other) {
+		unsigned int lcm = std::lcm(other.den, den); // Get the least common multiple
+		unsigned int this_den_factor = lcm / den; // calculates denom factor to reach LCM
+		unsigned int other_den_factor = lcm / other.num; // Ditto as above line
+
+		// Multiply this fraction's num by denom factor to reach LCM
+		num *= this_den_factor;
+		// Do the same for the other fraction
+		other.num *= other_den_factor;
+		return Fraction(num + other.num, lcm);
+	}
+
+	// Overload + operator
+	Fraction operator+(Fraction& other) {
+		return add(other);
+	}
+
+	// Multiply two fractions together
+	Fraction multiply(Fraction& other) {
+		Fraction fr(num * other.num, den * other.den);
+		fr.reduce();
+		return fr;
+	}
+
+	// Overload * operator
+	Fraction operator*(Fraction& other) {
+		return multiply(other);
+	}
+
+  private:
+	Fraction reduce() {
+		unsigned int gcd = std::__gcd(num, den);
+		Fraction f(num / gcd, den / gcd);
+		return f;
+	}
+
+};
 
 // Begins a game from specified state
 Yahtzee::Yahtzee(state start_state) {
@@ -644,6 +693,7 @@ int Yahtzee::combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&k
 	db.selectDiceConfig(&dc_data, true);
 	return dc_data.dice_id;
 }
+
 
 /*int main() {
 	Yahtzee y;

@@ -59,7 +59,7 @@
                                 								
                                 <option id="gnu.cpp.compiler.option.debugging.other.1257333710" name="Other debugging flags" superClass="gnu.cpp.compiler.option.debugging.other" useByScannerDiscovery="false" value="-g" valueType="string"/>
                                 								
-                                <option id="gnu.cpp.compiler.option.dialect.std.890424836" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
+                                <option id="gnu.cpp.compiler.option.dialect.std.890424836" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.c++17" valueType="enumerated"/>
                                 								
                                 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.cygwin.308470583" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input.cygwin"/>
                                 							
@@ -257,6 +257,22 @@
     	
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
     	
-    <storageModule moduleId="refreshScope"/>
+    <storageModule moduleId="refreshScope" versionNumber="2">
+        		
+        <configuration configurationName="Debug">
+            			
+            <resource resourceType="PROJECT" workspacePath="/Yahtzee"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="Release">
+            			
+            <resource resourceType="PROJECT" workspacePath="/Yahtzee"/>
+            		
+        </configuration>
+        	
+    </storageModule>
+    	
+    <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
     
 </cproject>

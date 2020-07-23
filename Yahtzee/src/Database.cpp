@@ -51,7 +51,7 @@ void Database::setFilename(std::string& filename) {
 int Database::exec(const std::string& str) {
     char *zErrMsg = 0;
     int rc;
-    std::cout << "  SQL: " << str << std::endl;
+    //std::cout << "  SQL: " << str << std::endl;
 
     rc = sqlite3_exec(db, str.c_str(), NULL, 0, &zErrMsg);
     if( rc != SQLITE_OK ){
@@ -184,8 +184,8 @@ int Database::insertOutput(output* data, bool forceCommit) {
     insertOutputBuffer << "(";
     insertOutputBuffer << data->state << ", ";
     insertOutputBuffer << data->optimal_play << ", ";
-    insertOutputBuffer << data->prob_num << ", ";
-    insertOutputBuffer << data->prob_den;
+    insertOutputBuffer << data->ev_num << ", ";
+    insertOutputBuffer << data->ev_den;
 
     if (forceCommit || insertOutputBufferCount >= insertLimit){
         return commitOutputInsert();
@@ -332,7 +332,6 @@ int Database::commitDiceConfigInsert() {
 
 int Database::commitDiceProbabilityInsert() {
     int ret;
-    std::cout << "hello\n";
 
     insertDiceProbabilityBuffer << ");";
     ret = exec(insertDiceProbabilityBuffer.str());
@@ -420,8 +419,8 @@ int Database::selectOutputCallback(void *void_data, int argc, char **argv, char 
 
     data->state = atoi(argv[0]);
     data->optimal_play = atoi(argv[1]);
-    data->prob_num  = atoi(argv[2]);
-    data->prob_den  = atoi(argv[3]);
+    data->ev_num  = atoi(argv[2]);
+    data->ev_den  = atoi(argv[3]);
 
     return 0;
 }
