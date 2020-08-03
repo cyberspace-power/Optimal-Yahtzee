@@ -4,7 +4,7 @@
 #include <iostream>
 
 // Example database usage
-/*int main() {
+int main() {
     /*std::string filename = "test.db";
     Database db = Database(filename);
 
@@ -30,5 +30,10 @@
 	dp_data.next_dice = 1;
 	y.db.selectDiceProbability(&dp_data);
 	std::cout << "PROBABILITY: " << dp_data.prob_num << "/" << dp_data.prob_den << std::endl;
-    return 0;
-}*/
+    return 0;*/
+
+	Yahtzee y;
+	int arr[10] = {1, 5, 0,0,0,0,0,0,0,0};
+	std::cout << y.getDiceKey(arr) << std::endl;
+	y.getKeptStateExpValue(1, 13);
+}

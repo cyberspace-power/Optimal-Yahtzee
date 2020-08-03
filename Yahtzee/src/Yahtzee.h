@@ -10,6 +10,8 @@
 #define YAHTZEE_H
 
 #include <vector>
+#include <numeric>
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -26,6 +28,67 @@ typedef struct state {
 	unsigned short sc_status; //scorecard status --> what sections remain
 	char roll_num;
 } state;
+
+class Fraction {
+  public:
+	unsigned int num;
+	unsigned int den;
+
+	Fraction(unsigned int num, unsigned int den) : num(num), den(den) {
+		reduce();
+	}
+
+	// Add two fractions together
+	Fraction add(Fraction& other) {
+		unsigned int lcm = std::lcm(other.den, den); // Get the least common multiple
+		unsigned int this_den_factor = lcm / den; // calculates denom factor to reach LCM
+		unsigned int other_den_factor = lcm / other.num; // Ditto as above line
+
+		// Multiply this fraction's num by denom factor to reach LCM
+		num *= this_den_factor;
+		// Do the same for the other fraction
+		other.num *= other_den_factor;
+		return Fraction(num + other.num, lcm);
+	}
+
+	// Overload + operator
+	Fraction operator+(Fraction& other) {
+		return add(other);
+	}
+
+	void operator+=(Fraction& other) {
+		Fraction temp = add(other);
+		num = temp.num;
+		den = temp.den;
+	}
+
+	// Multiply two fractions together
+	Fraction multiply(Fraction& other) {
+		Fraction fr(num * other.num, den * other.den);
+		fr.reduce();
+		return fr;
+	}
+
+	// Overload * operator
+	Fraction operator*(Fraction& other) {
+		return multiply(other);
+	}
+
+	void operator*=(Fraction& other) {
+		Fraction temp = multiply(other);
+		num = temp.num;
+		den = temp.den;
+	}
+
+  private:
+	void reduce() {
+		unsigned int gcd = std::__gcd(num, den);
+		num /= gcd;
+		den /= gcd;
+		return;
+	}
+
+};
 
 class Yahtzee {
   public:
@@ -53,6 +116,7 @@ class Yahtzee {
 	void initializeTableDiceConfig();
 	void initializeTableDiceProbability();
 	void initializeTableOutput();  // TODO here's the fun(nest) part
+
 
 	Database db;
   private:
@@ -83,7 +147,10 @@ class Yahtzee {
 	int getNumerator(int num_of_dice, const int (&roll_curr_combo)[10]); // helps DiceProb
 	static int factorial(int x); // helps DiceProb
 	int combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&kept_curr_combo)[10]); // helps DiceProb and Output
-	void reduce(int &num, int &den);
+	void Yahtzee::fillKeptDiceArray(int (&roll_curr_combo)[10], int dice_id, int kept_dice_key);
+	Fraction getKeptStateExpValue(int num_of_dice, int freq_left, int min, int curr_index, int (&roll_curr_combo)[10],
+			int (&kept_curr_combo)[10], int state);
+
 };
 
 #endif /* YAHTZEE_H */

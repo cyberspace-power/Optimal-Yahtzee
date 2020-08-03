@@ -213,7 +213,7 @@ int getSectionToTakeInput(int player_num, YahtzeeGame & yg) {
 	return section;
 }
 
-int main() {
+/*int main() {
 	int players = getNumberOfPlayersInput();
 	YahtzeeGame game(players);
 	Yahtzee curr_players[players];
@@ -264,3 +264,4 @@ int main() {
 	}
 	std::cin.clear();
 }
+*/

@@ -9,7 +9,6 @@
 #include <iostream>
 #include <bitset> // print out bits
 #include <algorithm> // sort
-#include <numeric>
 #include <cstdlib> // rand, atoi
 #include <ctime> // time() used to seed RNG
 #include <string>
@@ -18,54 +17,6 @@
 
 #include "Yahtzee.h"
 #include "Database.h"
-
-class Fraction {
-  public:
-	unsigned int num;
-	unsigned int den;
-
-	Fraction(unsigned int num, unsigned int den) : num(num), den(den) {
-		*this = reduce();
-	}
-
-	// Add two fractions together
-	Fraction add(Fraction& other) {
-		unsigned int lcm = std::lcm(other.den, den); // Get the least common multiple
-		unsigned int this_den_factor = lcm / den; // calculates denom factor to reach LCM
-		unsigned int other_den_factor = lcm / other.num; // Ditto as above line
-
-		// Multiply this fraction's num by denom factor to reach LCM
-		num *= this_den_factor;
-		// Do the same for the other fraction
-		other.num *= other_den_factor;
-		return Fraction(num + other.num, lcm);
-	}
-
-	// Overload + operator
-	Fraction operator+(Fraction& other) {
-		return add(other);
-	}
-
-	// Multiply two fractions together
-	Fraction multiply(Fraction& other) {
-		Fraction fr(num * other.num, den * other.den);
-		fr.reduce();
-		return fr;
-	}
-
-	// Overload * operator
-	Fraction operator*(Fraction& other) {
-		return multiply(other);
-	}
-
-  private:
-	Fraction reduce() {
-		unsigned int gcd = std::__gcd(num, den);
-		Fraction f(num / gcd, den / gcd);
-		return f;
-	}
-
-};
 
 // Begins a game from specified state
 Yahtzee::Yahtzee(state start_state) {
@@ -569,7 +520,7 @@ void Yahtzee::setDiceConfigTables(int freq_left, int min, int curr_index, int (&
 }
 
 /*
- * Purpose: Sets the dice roll probability table:
+ * Purpose: Sets the dice roll probability table and helps output table set values:
  * Kept State Id | Potential Dice State Id | Prob Numerator | Prob Denominator
  * Style: Recursively goes through all possible rolls given the kept dice state. This means
  * 		that impossible dice rolls will not be added to the table.
@@ -693,6 +644,80 @@ int Yahtzee::combineAndGetDiceId(const int (&roll_curr_combo)[10], const int (&k
 	db.selectDiceConfig(&dc_data, true);
 	return dc_data.dice_id;
 }
+
+/*
+ * Fills in kept_curr_combo for the calling function
+ */
+void Yahtzee::fillKeptDiceArray(int (&kept_dice_arr)[10], int dice_id, int kept_dice_key) {
+	diceConfig dc; // get dice config from dice_id
+	dc.dice_id = dice_id;
+	dc = db.selectDiceConfig(&dc, false); // Get the dice configuration for given dice_id
+	int dice_roll_freqs[6] = {dc.num_1s, dc.num_2s, dc.num_3s, dc.num_4s, dc.num_5s, dc.num_6s};
+	int dice_roll[5] = {0,0,0,0,0}; // Using the dice freqs, create array of roll
+	int curr = 0;
+	for(int i = 0; i < 6; i++) {
+		for(int j = 0; j < dice_roll_freqs[i]; j++) {
+			dice_roll[curr] = i;
+			curr++;
+		}
+	}
+	// Figure out which dice are being kept, and if they are NOT, decrement
+	// from the corresponding dice_roll_freqs value.
+	// Then, dice_roll_freqs will represent the frequency array of the kept dice
+	for(int i = 0; i < 5; i++) {
+		if(!((kept_dice_key > i) & 1))
+			dice_roll_freqs[dice_roll[i]]--;
+	}
+
+	// Now, finally we will up the kept dice array based upon the frequencies
+	int count = 0;
+	for(int i = 0; i < 6; i++) {
+			if(dice_roll_freqs[i] != 0) {
+			kept_dice_arr[count*2] = i;
+			kept_dice_arr[count*2 + 1] = dice_roll_freqs[i];
+			count++;
+		}
+	}
+	return;
+}
+
+/*
+ * Get the expected value from keeping specific dice
+ * TEST ME!
+ */
+Fraction Yahtzee::getKeptStateExpValue(int num_of_dice, int freq_left, int min, int curr_index, int (&roll_curr_combo)[10],
+		int (&kept_curr_combo)[10], int next_state) {
+	Fraction sum(0,1);
+	for(int i = min; i <= 6; i++) {
+			roll_curr_combo[curr_index] = i;
+			for(int j = freq_left; j > 0; j--) {
+				roll_curr_combo[curr_index + 1] = j;
+				if(j == freq_left) { // No more dice can be added to combo. Map it!
+					diceProbability dp;
+					dp.kept_dice = getDiceKey(kept_curr_combo);
+					dp.next_dice = combineAndGetDiceId(roll_curr_combo, kept_curr_combo);
+					db.selectDiceProbability(&dp);
+					output o;
+					o.state = (next_state & ~0xff) | dp.next_dice; // Clear last 8 bits (prev dice_id) and replace with new dice id
+					db.selectOutput(&o);
+					// Here is the punchline -- the expected value of this potential state is calculated
+					// By multiplying the expected value of the next state times the probability of that state happening
+					Fraction EV(dp.prob_num * o.ev_num, dp.prob_den * o.ev_den);
+					sum += EV;
+				}
+				else if(min == 6 && j < freq_left) // No higher number than 6 is possible. Break!
+					break;
+				else // recurse to next highest number and place in combo array
+					sum += getKeptStateExpValue(num_of_dice, freq_left-j, i+1, curr_index+2, roll_curr_combo, kept_curr_combo, next_state);
+			}
+		}
+		// About to return to previous recursion. Reset array values to 0
+		roll_curr_combo[curr_index] = 0;
+		roll_curr_combo[curr_index + 1] = 0;
+		return sum;
+}
+
+
 
 
 /*int main() {
